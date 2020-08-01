@@ -37,7 +37,6 @@ class SetupTraining():
         self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptrual loss')
         self.parser.add_argument('--instance_norm', type=float, default=0, help='use instance normalization')
         # I want tanh at the end of mine!
-
         # noise will be set to 0 by default
         #input_linear is false
         #patchD will be True by default
