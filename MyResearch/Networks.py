@@ -26,7 +26,7 @@ class model:
         self.vgg_loss=PerceptualLoss(opt)
         self.vgg_loss.cuda()#--> Shift to the GPU
         
-        self.vgg=networks.loadvgg16("./model",self.gpu_ids)#This is for data parallelism
+        self.vgg=networks.loadvgg16(self.gpu_ids)#This is for data parallelism
         #Actually load the VGG model(THIS IS CRUCIAL!)... This is the weights that we had to manually add
         self.vgg.eval() # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
 			#The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makse sense)
@@ -58,6 +58,13 @@ class PerceptualLoss(nn.Module):
         target_feature_map=vgg(target_vgg,self.opt)# Get the feature of the target image
         
         return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2) # We are using this to stabilize training( as mentioned in the paper)
+
+def load_vgg16(gpu_ids):
+    vgg = Vgg16()
+    vgg.cuda(device=gpu_ids[0])
+    vgg.load_state_dict(torch.load('vgg16.weight'))# Adding the weights to the model
+    vgg = torch.nn.DataParallel(vgg, gpu_ids)
+    return vgg
         
         
         
