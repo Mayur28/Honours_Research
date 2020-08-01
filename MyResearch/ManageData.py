@@ -9,12 +9,14 @@ import torchvision.transforms as transforms# Try to remove
 #Try to go the opencv route
 
 def DataLoader(opt):
-    return CustomDataLoader().initialize(opt)
+    data_loader=CustomDataLoader()
+    data_loader.initialize(opt)
+    return data_loader
 
 def MakeDataset(opt):
-  dataset=FullDataset()
-  dataset.initialize(opt)
-  return dataset
+    dataset=FullDataset()
+    dataset.initialize(opt)
+    return dataset
 
 def import_dataset(directory):
     images = []
@@ -22,7 +24,7 @@ def import_dataset(directory):
 
     for root, _, files in sorted(os.walk(directory)):
         for file_name in files:
-            if  imghdr.what(directory+"/"+file_name)=='png' or  imghdr.what(directory+"/"+file_name)=='jpg':
+            if  imghdr.what(directory+"/"+file_name)=='png' or  imghdr.what(directory+"/"+file_name)=='jpeg':
                 path = os.path.join(root, file_name)
                 img = cv2.cvtColor(cv2.imread(path,1),cv2.COLOR_BGR2RGB)
                 images.append(img)
@@ -77,7 +79,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         self.B_imgs, _ =import_dataset(self.dir_B)
         
         self.A_size=len(self.A_imgs)
-        self.B_size=len(self.A_imgs)
+        self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)
         
     def __getitem__(self,index):
@@ -95,5 +97,5 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}#,'A_paths': A_path, 'B_paths': B_path}
     
     def __len__(self):
-        return self.A_size
+        return max(self.A_size,self.B_size)
         
