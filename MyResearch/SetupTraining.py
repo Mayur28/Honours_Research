@@ -7,7 +7,7 @@ class SetupTraining():
         self.parser=argparse.ArgumentParser()
         # These are the BaseOptions (Change the 'help' eventually!)
         #self.parser.add_argument('--dataroot', required=True, help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
-        self.parser.add_argument('--batchSize', type=int, default=1, help='input batch size (One of the aspects that can be used to control GPU requirements)')
+        self.parser.add_argument('--batch_size', type=int, default=1, help='input batch size (One of the aspects that can be used to control GPU requirements)')
         self.parser.add_argument('--crop_size', type=int, default=256, help='Crop the images to this new size')
         self.parser.add_argument('--patch_size', type=int, default=64, help='specifies the size of the patch that we are going to use')
         self.parser.add_argument('--gpu_ids', type=str, default='0', help="Used to specify the ID's of the GPU's to be used (e.g 0,1 if 2 GPU's are used)")

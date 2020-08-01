@@ -48,7 +48,7 @@ class CustomDataLoader:
         self.opt=opt
         self.dataset=MakeDataset(opt)
         print(type(self.dataset))
-        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batchSize,shuffle= True, num_workers=6)
+        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, num_workers=6)
         
     
     def load(self):# This will return the iterable over the dataset

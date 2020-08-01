@@ -1,4 +1,9 @@
 import torch.nn as nn
+#SPICE EVERYTHING UP, TOO SIMILIAR!!!
+#Blend it with Mask Shadow GAN
+# Find other papers as well
+# Do with my own understanding!!!
+#This is just temporary, be ruthless thereafter
 
 
 
@@ -12,7 +17,7 @@ class model:
         
         # Initialize the data structures to hold all each type of image
         batch_size=opt.batch_size
-        new_dim=opt.fineSize
+        new_dim=opt.crop_size
         self.input_A=self.Tensor(batch_size,3,new_dim,new_dim)
         self.input_B=self.Tensor(batch_size,3,new_dim,new_dim)
         self.input_img=self.Tensor(batch_size,3,new_dim,new_dim)
@@ -20,6 +25,19 @@ class model:
         
         self.vgg_loss=PerceptualLoss(opt)
         self.vgg_loss.cuda()#--> Shift to the GPU
+        
+        self.vgg=networks.loadvgg16("./model",self.gpu_ids)#This is for data parallelism
+        #Actually load the VGG model(THIS IS CRUCIAL!)... This is the weights that we had to manually add
+        self.vgg.eval() # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
+			#The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makse sense)
+            
+        for param in self.vgg.parameters():
+                param.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
+
+		#G_A : Is our only generator
+		#D_A : Is the Global Discriminator
+		#D_P : Is the patch discriminator
+        print("HELLO, The end has been reached")
         
 
 class PerceptualLoss(nn.Module):
