@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 #SPICE EVERYTHING UP, TOO SIMILIAR!!!
 #Blend it with Mask Shadow GAN
@@ -26,7 +27,7 @@ class model:
         self.vgg_loss=PerceptualLoss(opt)
         self.vgg_loss.cuda()#--> Shift to the GPU
         
-        self.vgg=networks.loadvgg16(self.gpu_ids)#This is for data parallelism
+        self.vgg=load_vgg16(self.gpu_ids)#This is for data parallelism
         #Actually load the VGG model(THIS IS CRUCIAL!)... This is the weights that we had to manually add
         self.vgg.eval() # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
 			#The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makse sense)
