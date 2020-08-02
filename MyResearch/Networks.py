@@ -49,7 +49,7 @@ class The_Model:
         
         opt.skip=True
         
-        self.Gen=Unet_generator1(opt.norm,self.gpu_ids,skip=skip,opt=opt)
+        self.Gen=Unet_generator1(opt)
         
 		#G_A : Is our only generator
 		#D_A : Is the Global Discriminator
@@ -62,8 +62,116 @@ class Unet_generator1(nn.Module):
         super(Unet_generator1,self).__init__()
         
         self.opt=opt
-        print("SKIP: %s"%self.skip)
-        # They explicitly set self.opt=skip, doesnt seem necessary
+        print("SKIP: %s"%self.opt.skip)
+        # They explicitly set self.skip=skip, doesnt seem necessary
+        
+        # This will be used to resize the attention map to fit the latent result at each upsampling step
+        self.resized_att1 = nn.MaxPool2d(2)# This is seperate( this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
+        self.resized_att2 = nn.MaxPool2d(2)
+        self.resized_att3 = nn.MaxPool2d(2)
+        self.resized_att4 = nn.MaxPool2d(2)
+        
+        self.conv1_1=nn.Conv2d(4,32,3,padding=1)# 4 because of the the RGB image and the attention map...
+        self.LRelu1_1=nn.LeakyReLU(0.2,inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
+        if(self.opt.norm_type=='Batch'):
+            self.norm1_1=nn.BatchNorm2d(32)
+        else:
+            self.norm1_1=nn.InstanceNorm2d(32)
+            
+        self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
+        self.LReLU1_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='Batch'):
+            self.norm1_2 = nn.BatchNorm2d(32)
+        else:
+            self.norm1_2=nn.InstanceNorm2d(32)
+        self.max_pool1 = nn.MaxPool2d(2)# Try to get rid of this form of downsampling (Read Radford)
+        
+        
+        
+        self.conv2_1=nn.Conv2d(32,64,3,padding=1)
+        self.LRelu2_1=nn.LeakyReLU(0.2,inplace=True)
+        if(self.opt.norm_type=='Batch'):
+            self.norm2_1=nn.BatchNorm2d(64)
+        else:
+            self.norm2_1=nn.InstanceNorm2d(64)
+            
+        self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.LReLU2_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='Batch'):
+            self.norm2_2 = nn.BatchNorm2d(64)
+        else:
+            self.norm2_2=nn.InstanceNorm2d(64)
+        self.max_pool2 = nn.MaxPool2d(2)
+        
+        
+        self.conv3_1=nn.Conv2d(64,128,3,padding=1)
+        self.LRelu3_1=nn.LeakyReLU(0.2,inplace=True)
+        if(self.opt.norm_type=='Batch'):
+            self.norm3_1=nn.BatchNorm2d(128)
+        else:
+            self.norm3_1=nn.InstanceNorm2d(128)
+        self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.LReLU3_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='Batch'):
+            self.norm3_2 = nn.BatchNorm2d(128)
+        else:
+            self.norm3_2=nn.InstanceNorm2d(128)
+        self.max_pool3 = nn.MaxPool2d(2)
+        
+        
+        self.conv4_1=nn.Conv2d(128,256,3,padding=1)
+        self.LRelu4_1=nn.LeakyReLU(0.2,inplace=True)
+        if(opt.norm_type=='Batch'):
+            self.norm4_1=nn.BatchNorm2d(256)
+        else:
+            self.norm4_1=nn.InstanceNorm2d(256)
+        self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.LReLU4_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (opt.norm_type=='Batch'):
+            self.norm4_2 = nn.BatchNorm2d(256)
+        else:
+            self.norm4_2=nn.InstanceNorm2d(256)
+        self.max_pool4 = nn.MaxPool2d(2)
+        
+        
+        
+        self.conv5_1=nn.Conv2d(256,512,3,padding=1)
+        self.LRelu5_1=nn.LeakyReLU(0.2,inplace=True)
+        if(opt.norm_type=='Batch'):
+            self.norm5_1=nn.BatchNorm2d(512)
+        else:
+            self.norm5_1=nn.InstanceNorm2d(512)
+        self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
+        self.LReLU5_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (opt.norm_type=='Batch'):
+            self.norm5_2 = nn.BatchNorm2d(512)
+        else:
+            self.norm5_2=nn.InstanceNorm2d(512)
+        self.max_pool5 = nn.MaxPool2d(2)
+        
+        
+        #The bottleneck has been reached, we now enter the decoder. We need to now upsample to produce the sample.
+        # self.deconv5 = nn.ConvTranspose2d(512, 256, 2, stride=2)# IT SEEMS THAT THEY ALREADY ATTEMPTED WHAT I WANTED TO DO( USE THE TRANSPOSE CONV LAYER TO UPSAMPLE)
+        self.deconv5 = nn.Conv2d(512, 256, 3, padding=1)#This is apparently referred to as a bilinear upsampling layer.(According to the paper). This apparently gets rid of checkerboard effects
+        self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1)# Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
+        self.LRelu6_1 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='batch'):
+            self.norm6_1 =  nn.BatchNorm2d(256)
+        else:
+            self.norm6_1= nn.InstanceNorm2d(256)
+        self.conv6_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.LRelu6_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='batch'):
+            self.norm6_2 = SynBN2d(256) if self.opt.syn_norm else nn.BatchNorm2d(256)
+            
+        self.deconv6=nn.Conv2d(256,128,padding=1)
+        
+        
+        
+        
+        
+        
+        
 
 class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and have a forward() function
     def __init__(self,opt):

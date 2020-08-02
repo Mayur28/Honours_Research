@@ -16,7 +16,7 @@ class SetupTraining():
         # Set the number of loading threads to 6 ( there's is 4)
         #self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/EnlightenGAN2/EnlightenGAN-master/checkpoints/', help='models are saved here')
         self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/EnlightenGAN2/', help='models are saved here')
-        self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
+        self.parser.add_argument('--norm_type', type=str, default='batch', help='instance normalization or batch normalization')
         # We are only cropping, experiment with the other options here!
         self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
         
@@ -61,7 +61,6 @@ class SetupTraining():
         self.parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
         self.parser.add_argument('--config', type=str, default='configs/unit_gta2city_folder.yaml', help='Path to the config file.')
         self.isTrain = True
-        self.parse()
         
 
     def parse(self):
