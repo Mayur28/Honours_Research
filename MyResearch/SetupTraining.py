@@ -15,7 +15,7 @@ class SetupTraining():
         # We are only using the single_model
         # Set the number of loading threads to 6 ( there's is 4)
         #self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/EnlightenGAN2/EnlightenGAN-master/checkpoints/', help='models are saved here')
-        self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/MyResearch', help='models are saved here')
+        self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/EnlightenGAN2/', help='models are saved here')
         self.parser.add_argument('--norm', type=str, default='instance', help='instance normalization or batch normalization')
         # We are only cropping, experiment with the other options here!
         self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')

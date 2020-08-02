@@ -62,7 +62,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         
         
         self.A_imgs = import_dataset(A_directory)
-        self.B_imgs = import_dataset(A_directory)
+        self.B_imgs = import_dataset(B_directory)
         
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)

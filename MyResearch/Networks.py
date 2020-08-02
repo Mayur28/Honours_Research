@@ -46,6 +46,7 @@ class The_Model:
         for param in self.vgg.parameters():# THIS IS THE BEST WHY OF DOING THIS
                 param.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
 
+        print("The end has been reached")
 		#G_A : Is our only generator
 		#D_A : Is the Global Discriminator
 		#D_P : Is the patch discriminator
