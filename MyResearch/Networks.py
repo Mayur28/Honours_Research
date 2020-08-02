@@ -105,8 +105,8 @@ class The_Model:
             self.model_loss=GANLoss() # They accept if we're using LSGAN and the type of tensore we're using ( These are standardized things in my implementation)
             
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            self.G_Disc_optimizer=torch.optim(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            self.L_Disc_opitimizer=torch.optim(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
+            self.G_Disc_optimizer=torch.optim.Adam(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
+            self.L_Disc_opitimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.Gen.train()# Check if its really necessary
 
             
@@ -117,7 +117,7 @@ class The_Model:
         
 #Im using LSGAN loss which is very similiar to mseloss, but what is the difference?
 class GANLoss(nn.Module):
-    def __init__():
+    def __init__(self):
         super(GANLoss,self).__init__()
         self.real_label=1.0
         self.fake_label=0.0
