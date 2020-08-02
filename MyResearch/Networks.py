@@ -162,9 +162,60 @@ class Unet_generator1(nn.Module):
         self.conv6_2 = nn.Conv2d(256, 256, 3, padding=1)
         self.LRelu6_2 = nn.LeakyReLU(0.2, inplace=True)
         if (self.opt.norm_type=='batch'):
-            self.norm6_2 = SynBN2d(256) if self.opt.syn_norm else nn.BatchNorm2d(256)
+            self.norm6_2 =  nn.BatchNorm2d(256)
+        else:
+            self.norm6_2 = nn.InstanceNorm2d(256)
             
         self.deconv6=nn.Conv2d(256,128,padding=1)
+        self.conv7_1=nn.Conv2d(256,128,padding=1)
+        self.LRelu7_1=nn.LeakyReLU(0.2,inplace=True)
+        if (self.opt.norm_type=='batch'):
+            self.norm7_1 =  nn.BatchNorm2d(128)
+        else:
+            self.norm7_1= nn.InstanceNorm2d(128)
+        self.conv7_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.LRelu7_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='batch'):
+            self.norm7_2 =  nn.BatchNorm2d(128)
+        else:
+            self.norm7_2=nn.InstanceNorm2d(128)
+            
+            
+            
+        self.deconv7=nn.Conv2d(128,64,padding=1)
+        self.conv8_1=nn.Conv2d(128,64,padding=1)
+        self.LRelu8_1=nn.LeakyReLU(0.2,inplace=True)
+        if (self.opt.norm_type=='batch'):
+            self.norm8_1 =  nn.BatchNorm2d(64)
+        else:
+            self.norm8_1= nn.InstanceNorm2d(64)
+        self.conv8_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.LRelu8_2 = nn.LeakyReLU(0.2, inplace=True)
+        if (self.opt.norm_type=='batch'):
+            self.norm8_2 =  nn.BatchNorm2d(64)
+        else:
+            self.norm8_2=nn.InstanceNorm2d(64)
+            
+            
+        self.deconv8=nn.Conv2d(64,32,padding=1)
+        self.conv9_1=nn.Conv2d(64,32,padding=1)
+        self.LRelu9_1=nn.LeakyReLU(0.2,inplace=True)
+        if(self.opt.norm_type=='batch'):
+            self.norm9_1=nn.BatchNorm2d(32)
+        else:
+            self.norm9_1=nn.InstanceNorm2d(32)
+        seld.conv9_2=nn.Conv2d(32,32,3,padding=1)
+        self.LRelu9_2=nn.LeakyReLU(0.2,inplace=True)
+        
+        self.conv10=nn,Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
+        
+        if self.opt.tanh:
+            self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
+            
+        
+
+            
+        
         
         
         
