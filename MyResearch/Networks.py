@@ -10,6 +10,50 @@ import torch.nn.functional as F
 
 # Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
 
+def pad_tensor(input):# If I recall correctly, it is(batch number, depth, fineSize,fineSize)
+    height_org, width_org = input.shape[2], input.shape[3]
+    divide = 16
+
+    if width_org % divide != 0 or height_org % divide != 0:
+
+        width_res = width_org % divide
+        height_res = height_org % divide
+        if width_res != 0:
+            width_div = divide - width_res
+            pad_left = int(width_div / 2)
+            pad_right = int(width_div - pad_left)
+        else:
+            pad_left = 0
+            pad_right = 0
+
+        if height_res != 0:
+            height_div = divide - height_res
+            pad_top = int(height_div  / 2)
+            pad_bottom = int(height_div  - pad_top)
+        else:
+            pad_top = 0
+            pad_bottom = 0
+
+        padding = nn.ReflectionPad2d((pad_left, pad_right, pad_top, pad_bottom))
+        input = padding(input)
+    else:
+        pad_left = 0
+        pad_right = 0
+        pad_top = 0
+        pad_bottom = 0
+
+    height, width = input.data.shape[2], input.data.shape[3]
+    assert width % divide == 0, 'width cant divided by stride'
+    assert height % divide == 0, 'height cant divided by stride'
+
+    return input, pad_left, pad_right, pad_top, pad_bottom
+
+def pad_tensor_back(input, pad_left, pad_right, pad_top, pad_bottom): # We are just removing the padding
+    height, width = input.shape[2], input.shape[3]
+    return input[:,:, pad_top: height - pad_bottom, pad_left: width - pad_right]# This makes sense
+
+
+
 def weight_init(model):
     class_name=model.__class__.__name__
     if class_name.find('Conv')!=-1:
@@ -147,7 +191,7 @@ class Unet_generator1(nn.Module):
             self.norm5_2 = nn.BatchNorm2d(512)
         else:
             self.norm5_2=nn.InstanceNorm2d(512)
-        self.max_pool5 = nn.MaxPool2d(2)
+        self.max_pool5 = nn.MaxPool2d(2)# OVer and above everything, these maxpools can be removed because each is not different from each other.
         
         
         #The bottleneck has been reached, we now enter the decoder. We need to now upsample to produce the sample.
@@ -166,8 +210,8 @@ class Unet_generator1(nn.Module):
         else:
             self.norm6_2 = nn.InstanceNorm2d(256)
             
-        self.deconv6=nn.Conv2d(256,128,padding=1)
-        self.conv7_1=nn.Conv2d(256,128,padding=1)
+        self.deconv6=nn.Conv2d(256,128,3,padding=1)
+        self.conv7_1=nn.Conv2d(256,128,3,padding=1)
         self.LRelu7_1=nn.LeakyReLU(0.2,inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm7_1 =  nn.BatchNorm2d(128)
@@ -182,8 +226,8 @@ class Unet_generator1(nn.Module):
             
             
             
-        self.deconv7=nn.Conv2d(128,64,padding=1)
-        self.conv8_1=nn.Conv2d(128,64,padding=1)
+        self.deconv7=nn.Conv2d(128,64,3,padding=1)
+        self.conv8_1=nn.Conv2d(128,64,3,padding=1)
         self.LRelu8_1=nn.LeakyReLU(0.2,inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm8_1 =  nn.BatchNorm2d(64)
@@ -197,8 +241,8 @@ class Unet_generator1(nn.Module):
             self.norm8_2=nn.InstanceNorm2d(64)
             
             
-        self.deconv8=nn.Conv2d(64,32,padding=1)
-        self.conv9_1=nn.Conv2d(64,32,padding=1)
+        self.deconv8=nn.Conv2d(64,32,3,padding=1)
+        self.conv9_1=nn.Conv2d(64,32,3,padding=1)
         self.LRelu9_1=nn.LeakyReLU(0.2,inplace=True)
         if(self.opt.norm_type=='batch'):
             self.norm9_1=nn.BatchNorm2d(32)
@@ -207,11 +251,117 @@ class Unet_generator1(nn.Module):
         self.conv9_2=nn.Conv2d(32,32,3,padding=1)
         self.LRelu9_2=nn.LeakyReLU(0.2,inplace=True)
         
-        self.conv10=nn,Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
+        self.conv10=nn.Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
         
-        if self.opt.tanh:
-            self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
+        self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
+        print("End of the generator")   
+    
+    def forward(self,input,gray):
+        flag=0
+        if input.size()[3] >2200:# This seems ridiculous! Test performance when this is removed
+            avg=nn.avgPool2d(2)
+            input=avg(input)
+            gray=avg(gray)
+            flag=1#--> Indicates that at the end, we need to upsample
+            # Before Performing a forward pass on the tensor, we first pad the tensor containing the real (low-light) images
+			#If the dimensions of the images are perfectly divisible by 16, we dont pad.
+			# Otherwise, we pad the dimensions that are skew by the amount such that the dim. of the new padded version is divisible by 16.
+			#The pad_tensor function performs the padding (if necessary) and returns how much padding was applied to each side which makes it easier when removing the padding later.
             
+            input, pad_left,pad_right,pad_top,pad_bottom=pad_tensor(input)
+            gray, pad_left, pad_right,pad_top, pad_bottom=pad_tensor(gray)
+            
+            # First downsample the attention map for all stages
+            gray_2=self.downsample_1(gray)
+            gray_3=self.downsample_2(gray_2)
+            gray_4=self.downsample_3(gray_3)
+            gray_5=self.downsample_4(gray_4)
+            
+            #print("Gray_2 size: %s" % str(gray_2.size()))
+            #print("Gray_3 size: %s" % str(gray_3.size()))
+            #print("Gray_4 size: %s" % str(gray_4.size()))
+            #print("Gray_5 size: %s" % str(gray_5.size()))
+            
+            #Surely below can be automated!!!, do right at the end when I know what I'm doing!
+             x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
+            
+            conv1=self.self.norm1_2(self.LRelu1_2(self.conv1_2(x)))
+            x=self.max_pool1(conv1)
+            
+            x=self.norm2_1(self.LRelu2_1(self.conv2_1(x)))
+            conv2=self.norm2_2(self.LRelu2_2(self.conv2_2(x)))
+            x=self.max_pool2(conv2)
+            
+            x=self.norm3_1(self.LRelu3_1(self.conv3_1(x)))
+            conv3=self.norm3_2(self.LRelu3_2(self.conv3_2(x)))
+            x=self.max_pool3(conv3)
+            
+            x=self.norm4_1(self.LRelu4_1(self.conv4_1(x)))
+            conv2=self.norm4_2(self.LRelu4_2(self.conv4_2(x)))
+            x=self.max_pool4(conv2)
+            
+            x=self.norm5_1(self.LRelu5_1(self.conv5_1(x)))
+            x=x*gray_5
+            conv_5=self.norm5_2(self.LRelu5_2(self.conv5_2(x)))
+            
+            #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
+			# Experiment here to see if bilinear upsampling really is this best option.
+            
+            conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
+            conv4=conv4*gray_4
+            up6=torch.cat([self.deconv5(conv5),conv4],1)
+            x=self.norm6_1(self.self.LRelu6_1(self.conv6_1(up6)))
+            conv6=self.norm6_2(self.LRelu6_2(self.conv6_2(x)))
+            
+            conv6=F.upsample(conv6,scale_factor=2,mode='bilinear')
+            conv3=conv3*gray_3
+            up7=torch.cat([self.deconv6(conv6),conv3],1)
+            x=self.norm7_1(self.self.LRelu7_1(self.conv7_1(up7)))
+            conv7=self.norm7_2(self.LRelu7_2(self.conv7_2(x)))
+            
+            conv7=F.upsample(conv7,scale_factor=2,mode='bilinear')
+            conv2=conv2*gray_2
+            up8=torch.cat([self.deconv7(conv7),conv2],1)
+            x=self.norm8_1(self.self.LRelu8_1(self.conv8_1(up8)))
+            conv8=self.norm8_2(self.LRelu8_2(self.conv8_2(x)))
+            
+            conv8=F.upsample(conv8,scale_factor=2,mode='bilinear')
+            conv1=conv1*gray
+            up9=torch.cat([self.deconv8(conv8),conv1],1)
+            x=self.norm9_1(self.self.LRelu9_1(self.conv9_1(up9)))
+            conv9=self.norm9_2(self.LRelu9_2(self.conv9_2(x)))
+            
+            latent = self.conv10(conv9)# What is this for?
+
+            if self.opt.times_residual:# True!
+                latent = latent*gray
+
+            if self.opt.tanh:
+                latent = self.tanh(latent)# Oddly does not apply to us
+            if self.skip:
+            	output = latent + input*self.opt.skip# This is a breakthrough! The latent result is added to the low-light image to form the output.
+
+            
+        output = pad_tensor_back(output, pad_left, pad_right, pad_top, pad_bottom)
+        latent = pad_tensor_back(latent, pad_left, pad_right, pad_top, pad_bottom)
+        gray = pad_tensor_back(gray, pad_left, pad_right, pad_top, pad_bottom)
+        if flag == 1: # If fineSize>2200 which resulting in having to perform AvgPooling
+            output = F.upsample(output, scale_factor=2, mode='bilinear')
+            gray = F.upsample(gray, scale_factor=2, mode='bilinear')
+        if self.skip:
+            return output, latent # Want to see what is this latent!
+        else:
+            return output
+            
+            
+            
+            
+            
+            
+            
+        
+        
+    
         
 
             
