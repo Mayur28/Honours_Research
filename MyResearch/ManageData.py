@@ -9,29 +9,25 @@ import torchvision.transforms as transforms# Try to remove
 #Try to go the opencv route
 
 def DataLoader(opt):
-    data_loader=CustomDataLoader()
-    data_loader.initialize(opt)
+    data_loader=DataLoader(opt)
     return data_loader
 
 def MakeDataset(opt):
-    dataset=FullDataset()
-    dataset.initialize(opt)
+    dataset=FullDataset(opt)
     return dataset
 
 def import_dataset(directory):
     images = []
-    image_paths = []
 
     for root, _, files in sorted(os.walk(directory)):
         for file_name in files:
             if  imghdr.what(directory+"/"+file_name)=='png' or  imghdr.what(directory+"/"+file_name)=='jpeg':
                 path = os.path.join(root, file_name)
-                img = cv2.cvtColor(cv2.imread(path,1),cv2.COLOR_BGR2RGB)
+                img = cv2.imread(path,1)# Will be read in BGR!
                 images.append(img)
-                image_paths.append(path)
-    return images, image_paths
+    return images
 
-def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop
+def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop (THIS IS WHERE MY DATA AUGMENTATION WILL GO. rIGHT NOW, IM ONLY DOING RANDOM CROPPING)
     trans_list=[]
     trans_list.append(transforms.RandomCrop(opt.crop_size))
     
@@ -39,18 +35,12 @@ def config_transforms(opt):# I Should account for other kinds of transforms such
     trans_list+=[transforms.ToTensor(),transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]# this is neat. Looking at one channel (column), we are specifying mean=std=0.5 which normalizes the images to [-1,1]
     return transforms.Compose(trans_list)
 
-class CustomDataLoader:
-    def __init__(self):
-        pass
-    
-    
-    def initialize(self,opt):
+class DataLoader:
+    def __init__(self,opt):
         self.opt=opt
         self.dataset=MakeDataset(opt)
-        print(type(self.dataset))
-        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, num_workers=6)
-        
-    
+        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, num_workers=8)
+
     def load(self):# This will return the iterable over the dataset
         return self.dataloader
     
@@ -63,25 +53,21 @@ class CustomDataLoader:
 
 class FullDataset(data.Dataset):# I've inherited what I had to 
     # This class definitely needs to overwrite __len__ and  __getitem__
-    def __init__(self):
+    def __init__(self,opt):
         super(FullDataset, self).__init__()
-
-        
-    def initialize(self,opt):
-        #Check if we really need anything from Base_dataset!
         self.opt=opt
         #Form the path's to the data
-        self.dir_A=os.path.join('../final_dataset',opt.phase+'A')
-        self.dir_B=os.path.join('../final_dataset',opt.phase+'B')
+        A_directory=os.path.join('../final_dataset',opt.phase+'A')
+        B_directory=os.path.join('../final_dataset',opt.phase+'B')
         
         
-        self.A_imgs, _ =import_dataset(self.dir_A)
-        self.B_imgs, _ =import_dataset(self.dir_B)
+        self.A_imgs = import_dataset(A_directory)
+        self.B_imgs = import_dataset(A_directory)
         
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)
-        
+
     def __getitem__(self,index):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]

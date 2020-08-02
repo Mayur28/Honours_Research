@@ -18,8 +18,8 @@ def weight_init(model):
         torch.nn.init.normal_(model.weight.data,1.0,0.02)
         torch.nn.init.constant_(model.bias.data,0.0)
 
-class model:
-    def initialize(self,opt):
+class The_Model:
+    def __init__(self,opt):
         
         self.opt=opt
         self.gpu_ids=opt.gpu_ids
@@ -49,7 +49,6 @@ class model:
 		#G_A : Is our only generator
 		#D_A : Is the Global Discriminator
 		#D_P : Is the patch discriminator
-        print("HELLO, The end has been reached")
         
 
 class PerceptualLoss(nn.Module):
@@ -98,16 +97,7 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
         #Check how and when this is called!
         h=F.relu(self.conv1_1(X),inplace=True)
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
 def load_vgg(gpu_ids):
     vgg = Vgg()
     vgg.cuda(device=gpu_ids[0])

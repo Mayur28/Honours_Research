@@ -1,0 +1,11 @@
+I'm trying without handling the image path! Looks like this will need special attention when saving the images( This will come much later)
+SPICE EVERYTHING UP, TOO SIMILIAR!!!
+Blend it with Mask Shadow GAN
+ Find other papers as well
+ Do with my own understanding!!!
+This is just temporary, be ruthless thereafter
+
+ Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
+ I AM working directly in BGR, only when saving for display images, save the image in RGB
+ 
+ Check if the config thing in EGAN is really necessary or not.
