@@ -38,12 +38,12 @@ class model:
         self.vgg_loss=PerceptualLoss(opt)
         self.vgg_loss.cuda()#--> Shift to the GPU
         
-        self.vgg=load_vgg16(self.gpu_ids)#This is for data parallelism
+        self.vgg=load_vgg(self.gpu_ids)#This is for data parallelism
         #Actually load the VGG model(THIS IS CRUCIAL!)... This is the weights that we had to manually add
         self.vgg.eval() # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
 			#The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makse sense)
             
-        for param in self.vgg.parameters():
+        for param in self.vgg.parameters():# THIS IS THE BEST WHY OF DOING THIS
                 param.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
 
 		#G_A : Is our only generator
@@ -72,9 +72,9 @@ class PerceptualLoss(nn.Module):
         return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2) # We are using this to stabilize training( as mentioned in the paper)
     
 
-class VGG(nn.Module): # optimize this, There should surely be some variations to this.. Understand what is trying to be achieved and then determine how to go about achieving this!
+class Vgg(nn.Module): # optimize this, There should surely be some variations to this.. Understand what is trying to be achieved and then determine how to go about achieving this!
     def __init__(self):
-        super(VGG,self).__init__()
+        super(Vgg,self).__init__()
         
         self.conv1_1=nn.Conv2d(3,64,kernel_size=3,stride=1,padding=1)
         self.conv1_2=nn.Conv2d(64,64,kernel_size=3,stride=1,padding=1)
@@ -108,8 +108,8 @@ class VGG(nn.Module): # optimize this, There should surely be some variations to
         
         
         
-def load_vgg16(gpu_ids):
-    vgg = Vgg16()
+def load_vgg(gpu_ids):
+    vgg = Vgg()
     vgg.cuda(device=gpu_ids[0])
     vgg.load_state_dict(torch.load('vgg16.weight'))# Adding the weights to the model
     vgg = torch.nn.DataParallel(vgg, gpu_ids)
