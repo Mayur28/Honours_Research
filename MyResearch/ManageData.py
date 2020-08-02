@@ -17,7 +17,7 @@ def MakeDataset(opt):
     return dataset
 
 def import_dataset(directory):
-    images = []
+    images = []# This seems to  be the way to go...
 
     for root, _, files in sorted(os.walk(directory)):
         for file_name in files:
@@ -27,7 +27,7 @@ def import_dataset(directory):
                 images.append(img)
     return images
 
-def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop (THIS IS WHERE MY DATA AUGMENTATION WILL GO. rIGHT NOW, IM ONLY DOING RANDOM CROPPING)
+def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop (THIS IS WHERE MY DATA AUGMENTATION WILL GO. RIGHT NOW, IM ONLY DOING RANDOM CROPPING)
     trans_list=[]
     trans_list.append(transforms.RandomCrop(opt.crop_size))
     

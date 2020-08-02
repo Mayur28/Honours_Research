@@ -9,3 +9,6 @@ This is just temporary, be ruthless thereafter
  I AM working directly in BGR, only when saving for display images, save the image in RGB
  
  Check if the config thing in EGAN is really necessary or not.
+ 
+ # There is a lot of varitation that can come out of the VGG functions
+ Really make this my own! Experiment and only if really broken, revert to their altered form
