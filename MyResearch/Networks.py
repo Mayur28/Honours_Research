@@ -84,7 +84,7 @@ class The_Model:
         self.vgg_loss=PerceptualLoss(opt) # Use the alternate implementation when experimenting
         self.vgg_loss.cuda()#--> Shift to the GPU
         
-        self.vgg=load_vgg(self.gpu_ids)#This is for data parallelism
+        self.vgg=load_vgg(self.opt.gpu_ids)#This is for data parallelism
         #Actually load the VGG model(THIS IS CRUCIAL!)
         self.vgg.eval() # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
         #The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makes sense)
@@ -97,7 +97,7 @@ class The_Model:
         
         self.Gen=Unet_generator1(opt)
         
-        if(self.isTrain):
+        if(self.opt.isTrain):
             self.G_Disc=PatchGAN(opt,False) # This declaration should have a patch option because they have different number of layers each.
             self.L_Disc=PatchGAN(opt,True)
 		#G_A : Is our only generator
@@ -359,12 +359,19 @@ class Unet_generator1(nn.Module):
             
 
 class PatchGAN(nn.Module):
-    def __init__(self,opt):
-        super(NoNormDiscriminator, self).__init__()
+    def __init__(self,opt,patch):
+        super(PatchGAN, self).__init__()
         
         self.opt=opt
+        if(patch==True):
+            no_layers=self.opt.n_layers_patchD
+        else:
+            no_layers=self.opt.n_layers_D
+
+        ndf=64
         
-        sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2,nn.LeakyReLU(0.2,True))]
+        
+        sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2),nn.LeakyReLU(0.2,True)]
         
         # The rubbish below can be modified!
         #Filter out this rubbish
@@ -372,21 +379,21 @@ class PatchGAN(nn.Module):
         
         nf_mult=1
         nf_mult_prev=1
-        for n in range(1,self.opt.n_layers_D):
+        for n in range(1,no_layers):
             nf_mult_prev=nf_mult
             nf_mult=min(2**n,8)
-            sequence+=[nn.Conv2d(ndf*nf*mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
+            sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
             nn.LeakyReLU(0.2,True)]
             
         nf_mult_prev=nf_mult
-        nf_mult= min(2*self.opt.n_layers_D,8)
+        nf_mult= min(2*no_layers,8)
         sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2),nn.LeakyReLU(0.2,True)]
         
         sequence+=[nn.Conv2d(ndf*nf_mult,1,kernel_size=4,stride=1,padding=2)]
         
         # Reda up on the story about the sigmoid at the end. If yes, += it here
         
-        self.model=nn.Sequential(sequence)
+        self.model=nn.Sequential(*sequence)
         
     def forward(self,input):
         return self.model(input)#<-- pass through the discriminator itself which is represented by self.model

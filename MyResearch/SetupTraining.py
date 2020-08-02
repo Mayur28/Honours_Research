@@ -33,7 +33,8 @@ class SetupTraining():
  # vgg_maxpooling=False
     # In vgg is false
     # use_avgpool specifies if we use average or max pooling... Experiment with this!
-      
+        self.parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
+        self.parser.add_argument('--n_layers_patchD', type=int, default=3, help='only used if which_model_netD==n_layers')
         self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptrual loss')
         self.parser.add_argument('--instance_norm', type=float, default=0, help='use instance normalization')
         # I want tanh at the end of mine!
