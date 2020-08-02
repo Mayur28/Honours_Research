@@ -25,6 +25,9 @@ This is just temporary, be ruthless thereafter
  
  Check if it is absolutely necessary to have skip connections in the Unet generator
  
+ Check what does the super thing mean
  
+ Try to understand how exactly to manourvre the input tensor (particularly in the get_target tensor function)
+#Start with the above point tomorrow as it is pertinent!!!
  
  

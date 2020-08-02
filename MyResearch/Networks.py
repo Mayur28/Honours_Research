@@ -99,13 +99,36 @@ class The_Model:
         
         if(self.opt.isTrain):
             self.G_Disc=PatchGAN(opt,False) # This declaration should have a patch option because they have different number of layers each.
-            self.L_Disc=PatchGAN(opt,True)
+            self.L_Disc=PatchGAN(opt,True) # Check if this switch is working correctly or not!
+            
+            self.old_lr=opt.lr
+            self.model_loss=GANLoss() # They accept if we're using LSGAN and the type of tensore we're using ( These are standardized things in my implementation)
+            
+            self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
+            self.G_Disc_optimizer=torch.optim(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
+            self.L_Disc_opitimizer=torch.optim(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
+            self.Gen.train()# Check if its really necessary
+
+            
+            
 		#G_A : Is our only generator
 		#D_A : Is the Global Discriminator
 		#D_P : Is the patch discriminator
         
+#Im using LSGAN loss which is very similiar to mseloss, but what is the difference?
+class GANLoss(nn.Module):
+    def __init__():
+        super(GANLoss,self).__init__()
+        self.real_label=1.0
+        self.fake_label=0.0
+        #Check the need for the var stuff?
+        self.Tensor=torch.FloatTensor
+        self.loss=nn.MSELoss()
         
-
+    
+        
+    
+        
 class Unet_generator1(nn.Module):
     def __init__(self,opt):
         super(Unet_generator1,self).__init__()
@@ -463,7 +486,7 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
         self.conv5_2=nn.Conv2d(512,512,kernel_size=3,stride=1,padding=1)
         self.conv5_3=nn.Conv2d(512,512,kernel_size=3,stride=1,padding=1)
         
-    def forward(self,input,opt):# What is X?
+    def forward(self,input,opt):
         
         # Alot over variation can come out of this function
         #Check how and when this is called!
