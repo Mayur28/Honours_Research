@@ -10,7 +10,8 @@ import torch.nn.functional as F
 
 # Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
 
-def pad_tensor(input):# If I recall correctly, it is(batch number, depth, fineSize,fineSize)
+def pad_tensor(input):# Just check what is the dimensions of this input
+    # Spice this up, can surely be done better?
     height_org, width_org = input.shape[2], input.shape[3]
     divide = 16
 
@@ -66,8 +67,9 @@ class The_Model:
     def __init__(self,opt):
         
         self.opt=opt
-        self.gpu_ids=opt.gpu_ids
-        self.isTrain=opt.isTrain
+        # Wherever below varibales are needed, just access self.opt.gpu_ids instead!
+        #self.gpu_ids=opt.gpu_ids
+        #self.isTrain=opt.isTrain
         #Still need to set the save directory
         
         # Initialize the data structures to hold all each type of image
@@ -91,10 +93,13 @@ class The_Model:
         for weights in self.vgg.parameters():# THIS IS THE BEST WHY OF DOING THIS
                 weights.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
         
-        opt.skip=True
+        opt.skip=True#--> Not needed because this will be in the training setting?
         
         self.Gen=Unet_generator1(opt)
         
+        if(self.isTrain):
+            self.G_Disc=PatchGAN(opt,False) # This declaration should have a patch option because they have different number of layers each.
+            self.L_Disc=PatchGAN(opt,True)
 		#G_A : Is our only generator
 		#D_A : Is the Global Discriminator
 		#D_P : Is the patch discriminator
@@ -106,10 +111,9 @@ class Unet_generator1(nn.Module):
         super(Unet_generator1,self).__init__()
         
         self.opt=opt
-        print("SKIP: %s"%self.opt.skip)
         # They explicitly set self.skip=skip, doesnt seem necessary
-        
-        # This will be used to resize the attention map to fit the latent result at each upsampling step
+        # Surely I only need one of the MaxPooling layers, they area pretty much identical!
+        # These will be used to resize the attention map to fit the latent result at each upsampling step
         self.resized_att1 = nn.MaxPool2d(2)# This is seperate( this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
         self.resized_att2 = nn.MaxPool2d(2)
         self.resized_att3 = nn.MaxPool2d(2)
@@ -283,7 +287,7 @@ class Unet_generator1(nn.Module):
             #print("Gray_5 size: %s" % str(gray_5.size()))
             
             #Surely below can be automated!!!, do right at the end when I know what I'm doing!
-             x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
+            x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
             
             conv1=self.self.norm1_2(self.LRelu1_2(self.conv1_2(x)))
             x=self.max_pool1(conv1)
@@ -353,9 +357,41 @@ class Unet_generator1(nn.Module):
         else:
             return output
             
+
+class PatchGAN(nn.Module):
+    def __init__(self,opt):
+        super(NoNormDiscriminator, self).__init__()
+        
+        self.opt=opt
+        
+        sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2,nn.LeakyReLU(0.2,True))]
+        
+        # The rubbish below can be modified!
+        #Filter out this rubbish
+        # Look at flagship papers, as well as morphing EGAN's alternate implementations and get ideas from other papers
+        
+        nf_mult=1
+        nf_mult_prev=1
+        for n in range(1,self.opt.n_layers_D):
+            nf_mult_prev=nf_mult
+            nf_mult=min(2**n,8)
+            sequence+=[nn.Conv2d(ndf*nf*mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
+            nn.LeakyReLU(0.2,True)]
             
+        nf_mult_prev=nf_mult
+        nf_mult= min(2*self.opt.n_layers_D,8)
+        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2),nn.LeakyReLU(0.2,True)]
+        
+        sequence+=[nn.Conv2d(ndf*nf_mult,1,kernel_size=4,stride=1,padding=2)]
+        
+        # Reda up on the story about the sigmoid at the end. If yes, += it here
+        
+        self.model=nn.Sequential(sequence)
+        
+    def forward(self,input):
+        return self.model(input)#<-- pass through the discriminator itself which is represented by self.model
             
-            
+        
             
             
             

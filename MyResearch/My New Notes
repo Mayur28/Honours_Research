@@ -19,4 +19,12 @@ This is just temporary, be ruthless thereafter
  
  Between adjusting the dataset and removing the config, we're doing fewer 'iterations' per an epoch but this hasn't affected the quality of performance ( also reduced the time to 78-80 sec)
  
+ Look at the alternate configurations of EGAN and experiment
+ 
+ Go beyond what I wanted and state how exactly do I want to improve this in the long run
+ 
+ Check if it is absolutely necessary to have skip connections in the Unet generator
+ 
+ 
+ 
  
