@@ -204,7 +204,7 @@ class Unet_generator1(nn.Module):
             self.norm9_1=nn.BatchNorm2d(32)
         else:
             self.norm9_1=nn.InstanceNorm2d(32)
-        seld.conv9_2=nn.Conv2d(32,32,3,padding=1)
+        self.conv9_2=nn.Conv2d(32,32,3,padding=1)
         self.LRelu9_2=nn.LeakyReLU(0.2,inplace=True)
         
         self.conv10=nn,Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
