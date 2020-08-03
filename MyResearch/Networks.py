@@ -129,10 +129,22 @@ class The_Model:
         
         # This is for optimizing the generator.
         self.forward()# This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
-        self.G_optimizer.zero_grad()# Check the positioning of this statement
+        self.G_optimizer.zero_grad()# Check the positioning of this statement (can it be first?)
         self.backward_G()
         
         self.G_optimizer.step()
+        
+        # Now onto updating the discriminator!
+        self.G_Disc_optimizer.zero_grad()
+        self.backward_G_Disc()
+        
+        self.L_Disc_optimizer.zero_grad()
+        self.backward_L_Disc()
+        
+        self.G_Disc_optimizer.step()
+        self.L_Disc_optimizer.step()
+        
+        
         
     def forward(self):
         # Look into what the Variable stuff is for
@@ -226,6 +238,42 @@ class The_Model:
         
         self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss
         self.Gen_loss.backward()# Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
+        
+    
+    def backward_D_basic(self,network,real,fake,use_ragan):
+        # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
+        pred_fake=network.G_Disc(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+        pred_real=network.G_Disc(real)
+        # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
+        if(use_ragan):
+            Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
+            self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
+        else:
+            loss_D_real=self.model_loss(pred_real,True)
+            loss_D_fake=self.model_loss(pred_fake,False)
+            Disc_loss=(loss_D_real+loss_D_fake)/2
+        return Disc_loss
+        
+        
+    
+    
+        
+    def backward_G_Disc(self):
+        # Try to thing carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples... Why are we doing this again? We just did something similiar when updating the generator
+        self.G_Disc_loss=self.backward_D_basic(self.G_Disc,self.real_B,self.fake_B,True) # Why do need need this seperate function? Unless it will be in common OR handled difference in the local discriminator case? INVESTIGATE
+        self.G_Disc_loss.backward()# Thing about where exactly are we backpropagating this!?
+        
+    def backward_L_Disc(self):
+        L_Disc_loss=self.backward_D_basic(self.L_Disc,self.real_patch,self.fake_patch,False)
+        
+        for i in range(self.opt.patchD_3):
+            L_Disc_loss+=self.backward_D_basic(self.L_Disc, self.real_patch_list[i], self.fake_patch_list[i], False)
+        # They is the normal calculation. The calc. for the whole image is handled seperately... we only handling patches here, thats why we can average everything.
+        self.L_Disc_loss=L_Disc_loss/float(self.opt.patchD_3+1)
+        self.L_Disc_loss.backward()
+        
+        
+        
             
         
         
