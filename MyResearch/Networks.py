@@ -59,7 +59,7 @@ def pad_tensor_back(input, pad_left, pad_right, pad_top, pad_bottom): # We are j
 
 
 
-def weight_init(model):
+def weights_init(model):
     class_name=model.__class__.__name__
     if class_name.find('Conv')!=-1:
         torch.nn.init.normal_(model.weight.data,0.0,0.02)
@@ -99,11 +99,11 @@ class The_Model:
         
         opt.skip=True#--> Not needed because this will be in the training setting?
         
-        self.Gen=Unet_generator1(opt)
+        self.Gen=make_G(opt)
         
         if(self.opt.isTrain):
-            self.G_Disc=PatchGAN(opt,False) # This declaration should have a patch option because they have different number of layers each.
-            self.L_Disc=PatchGAN(opt,True) # Check if this switch is working correctly or not!
+            self.G_Disc=make_Disc(opt,False) # This declaration should have a patch option because they have different number of layers each.
+            self.L_Disc=make_Disc(opt,True) # Check if this switch is working correctly or not!
             
             self.old_lr=opt.lr
             self.model_loss=GANLoss() # They accept if we're using LSGAN and the type of tensore we're using ( These are standardized things in my implementation)
@@ -165,19 +165,19 @@ class The_Model:
         #print("Shape of real_img: %s " % self.real_img.size())
         
         #Make a prediction!
-        self.fake_B,self.latent_real_A=self.Gen.forward(self.real_img,self.real_A_gray)
+        self.fake_B,self.latent_real_A= self.Gen.forward(self.real_img,self.real_A_gray)
         
         # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
         w=self.real_A.size(3)
         h=self.real_B.size(2)
         
-        w_offset=random.randint(0,max(0,w-self.opt.patchSize-1))
-        h_offset=random.randint(0,max(0,h-self.opt.patchSize-1))
+        w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
+        h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
         
         # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from?
-        self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize] # Patch from our enhanced result
-        self.real_patch=self.real_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize]# Path from the training set's normal light images
-        self.input_patch=self.real_A[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize]# patch from the training set's low-light images... I dont really see why do we need this though??
+        self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
+        self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
+        self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
         
         # We now create a list of patches (the length of this list being determined by self.opt.patchD_3)    
         
@@ -186,13 +186,13 @@ class The_Model:
         self.input_patch_list=[]
         
         for i in range(self.opt.patchD_3):
-            w_offset=random.randint(0,max(0,w-self.opt.patchSize-1))
-            h_offset=random.randint(0,max(0,h-self.opt.patchSize-1))
+            w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
+            h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
             
             
-            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize])
-            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize])
-            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize])
+            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
             
             # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
             
@@ -277,7 +277,21 @@ class The_Model:
         
         
         
-            
+def make_G(opt):
+    generator=Unet_generator1(opt)
+    generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
+    generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
+    generator.apply(weights_init)# The weight initialization
+    return generator
+
+
+def make_Disc(opt,patch):
+    discriminator=PatchGAN(opt,patch)
+    discriminator.cuda(device=opt.gpu_ids[0]) # Jackpot, we are loading the model to the GPU
+    discriminator = torch.nn.DataParallel(discriminator, opt.gpu_ids)# Split the input across all the GPU's (if applicable)
+    discriminator.apply(weights_init)
+    return discriminator
+
         
         
         
@@ -358,7 +372,7 @@ class Unet_generator1(nn.Module):
             self.norm1_1=nn.InstanceNorm2d(32)
             
         self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
-        self.LReLU1_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.LRelu1_2 = nn.LeakyReLU(0.2, inplace=True)
         if (self.opt.norm_type=='Batch'):
             self.norm1_2 = nn.BatchNorm2d(32)
         else:
@@ -375,7 +389,7 @@ class Unet_generator1(nn.Module):
             self.norm2_1=nn.InstanceNorm2d(64)
             
         self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.LReLU2_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.LRelu2_2 = nn.LeakyReLU(0.2, inplace=True)
         if (self.opt.norm_type=='Batch'):
             self.norm2_2 = nn.BatchNorm2d(64)
         else:
@@ -390,7 +404,7 @@ class Unet_generator1(nn.Module):
         else:
             self.norm3_1=nn.InstanceNorm2d(128)
         self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.LReLU3_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.LRelu3_2 = nn.LeakyReLU(0.2, inplace=True)
         if (self.opt.norm_type=='Batch'):
             self.norm3_2 = nn.BatchNorm2d(128)
         else:
@@ -405,7 +419,7 @@ class Unet_generator1(nn.Module):
         else:
             self.norm4_1=nn.InstanceNorm2d(256)
         self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.LReLU4_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.LRelu4_2 = nn.LeakyReLU(0.2, inplace=True)
         if (opt.norm_type=='Batch'):
             self.norm4_2 = nn.BatchNorm2d(256)
         else:
@@ -421,7 +435,7 @@ class Unet_generator1(nn.Module):
         else:
             self.norm5_1=nn.InstanceNorm2d(512)
         self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.LReLU5_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.LRelu5_2 = nn.LeakyReLU(0.2, inplace=True)
         if (opt.norm_type=='Batch'):
             self.norm5_2 = nn.BatchNorm2d(512)
         else:
@@ -503,91 +517,86 @@ class Unet_generator1(nn.Module):
 			# Otherwise, we pad the dimensions that are skew by the amount such that the dim. of the new padded version is divisible by 16.
 			#The pad_tensor function performs the padding (if necessary) and returns how much padding was applied to each side which makes it easier when removing the padding later.
             
-            input, pad_left,pad_right,pad_top,pad_bottom=pad_tensor(input)
-            gray, pad_left, pad_right,pad_top, pad_bottom=pad_tensor(gray)
-            
-            # First downsample the attention map for all stages
-            gray_2=self.downsample_1(gray)
-            gray_3=self.downsample_2(gray_2)
-            gray_4=self.downsample_3(gray_3)
-            gray_5=self.downsample_4(gray_4)
-            
-            #print("Gray_2 size: %s" % str(gray_2.size()))
-            #print("Gray_3 size: %s" % str(gray_3.size()))
-            #print("Gray_4 size: %s" % str(gray_4.size()))
-            #print("Gray_5 size: %s" % str(gray_5.size()))
-            
-            #Surely below can be automated!!!, do right at the end when I know what I'm doing!
-            x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
-            
-            conv1=self.self.norm1_2(self.LRelu1_2(self.conv1_2(x)))
-            x=self.max_pool1(conv1)
-            
-            x=self.norm2_1(self.LRelu2_1(self.conv2_1(x)))
-            conv2=self.norm2_2(self.LRelu2_2(self.conv2_2(x)))
-            x=self.max_pool2(conv2)
-            
-            x=self.norm3_1(self.LRelu3_1(self.conv3_1(x)))
-            conv3=self.norm3_2(self.LRelu3_2(self.conv3_2(x)))
-            x=self.max_pool3(conv3)
-            
-            x=self.norm4_1(self.LRelu4_1(self.conv4_1(x)))
-            conv2=self.norm4_2(self.LRelu4_2(self.conv4_2(x)))
-            x=self.max_pool4(conv2)
-            
-            x=self.norm5_1(self.LRelu5_1(self.conv5_1(x)))
-            x=x*gray_5
-            conv_5=self.norm5_2(self.LRelu5_2(self.conv5_2(x)))
-            
-            #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
-			# Experiment here to see if bilinear upsampling really is this best option.
-            
-            conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
-            conv4=conv4*gray_4
-            up6=torch.cat([self.deconv5(conv5),conv4],1)
-            x=self.norm6_1(self.self.LRelu6_1(self.conv6_1(up6)))
-            conv6=self.norm6_2(self.LRelu6_2(self.conv6_2(x)))
-            
-            conv6=F.upsample(conv6,scale_factor=2,mode='bilinear')
-            conv3=conv3*gray_3
-            up7=torch.cat([self.deconv6(conv6),conv3],1)
-            x=self.norm7_1(self.self.LRelu7_1(self.conv7_1(up7)))
-            conv7=self.norm7_2(self.LRelu7_2(self.conv7_2(x)))
-            
-            conv7=F.upsample(conv7,scale_factor=2,mode='bilinear')
-            conv2=conv2*gray_2
-            up8=torch.cat([self.deconv7(conv7),conv2],1)
-            x=self.norm8_1(self.self.LRelu8_1(self.conv8_1(up8)))
-            conv8=self.norm8_2(self.LRelu8_2(self.conv8_2(x)))
-            
-            conv8=F.upsample(conv8,scale_factor=2,mode='bilinear')
-            conv1=conv1*gray
-            up9=torch.cat([self.deconv8(conv8),conv1],1)
-            x=self.norm9_1(self.self.LRelu9_1(self.conv9_1(up9)))
-            conv9=self.norm9_2(self.LRelu9_2(self.conv9_2(x)))
-            
-            latent = self.conv10(conv9)# What is this for?
+        input, pad_left,pad_right,pad_top,pad_bottom=pad_tensor(input)
+        gray, pad_left, pad_right,pad_top, pad_bottom=pad_tensor(gray)
+        
+        # First downsample the attention map for all stages
+        gray_2=self.resized_att1(gray)
+        gray_3=self.resized_att2(gray_2)
+        gray_4=self.resized_att3(gray_3)
+        gray_5=self.resized_att4(gray_4)
+        
+        #print("Gray_2 size: %s" % str(gray_2.size()))
+        #print("Gray_3 size: %s" % str(gray_3.size()))
+        #print("Gray_4 size: %s" % str(gray_4.size()))
+        #print("Gray_5 size: %s" % str(gray_5.size()))
+        
+        #Surely below can be automated!!!, do right at the end when I know what I'm doing!
+        x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
+        
+        conv1=self.norm1_2(self.LRelu1_2(self.conv1_2(x)))
+        x=self.max_pool1(conv1)
+        
+        x=self.norm2_1(self.LRelu2_1(self.conv2_1(x)))
+        conv2=self.norm2_2(self.LRelu2_2(self.conv2_2(x)))
+        x=self.max_pool2(conv2)
+        
+        x=self.norm3_1(self.LRelu3_1(self.conv3_1(x)))
+        conv3=self.norm3_2(self.LRelu3_2(self.conv3_2(x)))
+        x=self.max_pool3(conv3)
+        
+        x=self.norm4_1(self.LRelu4_1(self.conv4_1(x)))
+        conv4=self.norm4_2(self.LRelu4_2(self.conv4_2(x)))
+        x=self.max_pool4(conv4)
+        
+        x=self.norm5_1(self.LRelu5_1(self.conv5_1(x)))
+        x=x*gray_5
+        conv5=self.norm5_2(self.LRelu5_2(self.conv5_2(x)))
+        
+        #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
+        # Experiment here to see if bilinear upsampling really is this best option.
+        
+        conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
+        conv4=conv4*gray_4
+        up6=torch.cat([self.deconv5(conv5),conv4],1)
+        x=self.norm6_1(self.LRelu6_1(self.conv6_1(up6)))
+        conv6=self.norm6_2(self.LRelu6_2(self.conv6_2(x)))
+        
+        conv6=F.upsample(conv6,scale_factor=2,mode='bilinear')
+        conv3=conv3*gray_3
+        up7=torch.cat([self.deconv6(conv6),conv3],1)
+        x=self.norm7_1(self.LRelu7_1(self.conv7_1(up7)))
+        conv7=self.norm7_2(self.LRelu7_2(self.conv7_2(x)))
+        
+        conv7=F.upsample(conv7,scale_factor=2,mode='bilinear')
+        conv2=conv2*gray_2
+        up8=torch.cat([self.deconv7(conv7),conv2],1)
+        x=self.norm8_1(self.LRelu8_1(self.conv8_1(up8)))
+        conv8=self.norm8_2(self.LRelu8_2(self.conv8_2(x)))
+        
+        conv8=F.upsample(conv8,scale_factor=2,mode='bilinear')
+        conv1=conv1*gray
+        up9=torch.cat([self.deconv8(conv8),conv1],1)
+        x=self.norm9_1(self.LRelu9_1(self.conv9_1(up9)))
+        conv9=self.LRelu9_2(self.conv9_2(x))
+        
+        latent = self.conv10(conv9)# What is this for?
 
-            if self.opt.times_residual:# True!
-                latent = latent*gray
+        latent = latent*gray
 
-            if self.opt.tanh:
-                latent = self.tanh(latent)# Oddly does not apply to us
-            if self.skip:
-            	output = latent + input*self.opt.skip# This is a breakthrough! The latent result is added to the low-light image to form the output.
+        #if self.opt.tanh:
+        #    latent = self.tanh(latent)# Oddly does not apply to us
+        output = latent + input*self.opt.skip# This is a breakthrough! The latent result is added to the low-light image to form the output.
 
-            
+        
         output = pad_tensor_back(output, pad_left, pad_right, pad_top, pad_bottom)
         latent = pad_tensor_back(latent, pad_left, pad_right, pad_top, pad_bottom)
         gray = pad_tensor_back(gray, pad_left, pad_right, pad_top, pad_bottom)
         if flag == 1: # If fineSize>2200 which resulting in having to perform AvgPooling
             output = F.upsample(output, scale_factor=2, mode='bilinear')
             gray = F.upsample(gray, scale_factor=2, mode='bilinear')
-        if self.skip:
-            return output, latent # Want to see what is this latent!
-        else:
-            return output
-            
+        return output, latent # Want to see what is this latent!
+
 
 class PatchGAN(nn.Module):
     def __init__(self,opt,patch):
@@ -720,6 +729,7 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
   
         
         
+
 
 def load_vgg(gpu_ids):
     vgg = Vgg()
