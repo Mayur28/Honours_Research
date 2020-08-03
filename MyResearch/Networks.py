@@ -200,7 +200,7 @@ class The_Model:
            # Honestly dont think the patch stuff is really being handled in the best way right now...
             # I think there backward G can be combine here... This will then represent a full pass of the network, representing a full pass thorugh the network, therefore, we'll be able to calculate the generators gradients after a single function.  COMBINE AFTER I GETTING A WORKING PROTOTYPE
             
-    def backward_G():
+    def backward_G(self):
         # First let the discriminator make a prediction on the fake samples
         #This is the part recommended by Radford where we test real and fake samples in stages
         pred_fake=self.G_Disc.forward(self.fake_B)
@@ -315,7 +315,7 @@ class GANLoss(nn.Module):
         #Check the need for the var stuff?
         self.real_label_var=None
         self.fake_label_var=None
-        self.Tensor=torch.FloatTensor
+        self.Tensor=torch.cuda.FloatTensor
         self.loss=nn.MSELoss()
         
         
@@ -328,13 +328,16 @@ class GANLoss(nn.Module):
             
             if create_label:
                 real_tensor=self.Tensor(input.size()).fill_(self.real_label)
+                print(type(real_tensor))
                 #Check why do we need the variable function
                 self.real_label_var=Variable(real_tensor,requires_grad=False)
+                target_tensor=self.real_label_var
         else:
             create_label=((self.fake_label_var is None) or (self.fake_label_var.numel()!=input.numel()))
             
             if create_label:
                 fake_tensor=self.Tensor(input.size()).fill_(self.fake_label)
+                print(type(fake_tensor))
                 #Check why do we need the variable function
                 self.fake_label_var=Variable(fake_tensor,requires_grad=False)
                 target_tensor=self.fake_label_var
@@ -342,6 +345,14 @@ class GANLoss(nn.Module):
     
     def __call__(self,input,target_is_real):
         target_tensor=self.get_target_tensor(input,target_is_real)
+        #print("Check for input")
+        #print(input.is_cuda)
+        #print("Check for target tensor")
+        #print(target_tensor.is_cuda)
+        #print("Input Type")
+        #print(type(input))
+        #print("Target tensor type")
+        #print(type(target_tensor))
         return self.loss(input,target_tensor) # We then perform MSE on this!
         
                           
@@ -666,7 +677,8 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
 		#This is to stabilize training
         
     def compute_vgg_loss(self,vgg_network,image,target):
-        print("I am in Compute VGG_loss:%d"%image.shape)
+        print("I am in Compute VGG_loss")
+        print(image.shape)
         image_vgg=cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
         target_vgg=cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
         # Check if there is a work around this!
