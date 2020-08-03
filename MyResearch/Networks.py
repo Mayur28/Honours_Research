@@ -111,7 +111,7 @@ class The_Model:
             #Check if the below optimizers are set in accordance with Radford!
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.G_Disc_optimizer=torch.optim.Adam(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            self.L_Disc_opitimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
+            self.L_Disc_optimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             if self.opt.isTrain==False:
                 self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
                 
@@ -242,11 +242,13 @@ class The_Model:
         self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss
         self.Gen_loss.backward()# Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
         
-    
+
+
     def backward_D_basic(self,network,real,fake,use_ragan):
-        # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
-        pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+    # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
         pred_real=network.forward(real)
+        pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+        
         # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
         if(use_ragan):
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
@@ -254,7 +256,7 @@ class The_Model:
         else:
             loss_D_real=self.model_loss(pred_real,True)
             loss_D_fake=self.model_loss(pred_fake,False)
-            Disc_loss=(loss_D_real+loss_D_fake)/2
+            Disc_loss=(loss_D_real+loss_D_fake)*0.5
         return Disc_loss
         
         
@@ -328,22 +330,21 @@ class GANLoss(nn.Module):
             
             if create_label:
                 real_tensor=self.Tensor(input.size()).fill_(self.real_label)
-                print(type(real_tensor))
                 #Check why do we need the variable function
                 self.real_label_var=Variable(real_tensor,requires_grad=False)
-                target_tensor=self.real_label_var
+            target_tensor=self.real_label_var
         else:
             create_label=((self.fake_label_var is None) or (self.fake_label_var.numel()!=input.numel()))
-            
             if create_label:
                 fake_tensor=self.Tensor(input.size()).fill_(self.fake_label)
-                print(type(fake_tensor))
                 #Check why do we need the variable function
                 self.fake_label_var=Variable(fake_tensor,requires_grad=False)
-                target_tensor=self.fake_label_var
+            target_tensor=self.fake_label_var
         return target_tensor
     
     def __call__(self,input,target_is_real):
+        #print("Target Is Real")
+        #print(target_is_real)
         target_tensor=self.get_target_tensor(input,target_is_real)
         #print("Check for input")
         #print(input.is_cuda)
@@ -514,7 +515,6 @@ class Unet_generator1(nn.Module):
         self.conv10=nn.Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
         
         self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
-        print("End of the generator")   
     
     def forward(self,input,gray):
         flag=0
@@ -677,14 +677,14 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
 		#This is to stabilize training
         
     def compute_vgg_loss(self,vgg_network,image,target):
-        print("I am in Compute VGG_loss")
-        print(image.shape)
+        #print("I am in Compute VGG_loss")
+        #print(image.shape)
         image_vgg=vgg_preprocess(image,self.opt)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
         target_vgg=vgg_preprocess(target,self.opt)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
         # Check if there is a work around this!
         
-        img_feature_map=vgg(image_vgg,self.opt)# Get the feature map of the input image
-        target_feature_map=vgg(target_vgg,self.opt)# Get the feature of the target image
+        img_feature_map=vgg_network(image_vgg,self.opt)# Get the feature map of the input image
+        target_feature_map=vgg_network(target_vgg,self.opt)# Get the feature of the target image
         
         return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2)# --> According to the provided function
     
@@ -740,7 +740,7 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
         return relu5_1
   
         
-        
+#There is a lot of room for variation here
 def vgg_preprocess(batch, opt):
     tensortype = type(batch.data)
     (r, g, b) = torch.chunk(batch, 3, dim = 1)
