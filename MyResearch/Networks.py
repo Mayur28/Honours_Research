@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import random
+from torch.autograd import Variable
+
+
 
 #SPICE EVERYTHING UP, TOO SIMILIAR!!!
 #Blend it with Mask Shadow GAN
@@ -116,7 +119,7 @@ class The_Model:
 		#D_A : Is the Global Discriminator
 		#D_P : Is the patch discriminator
 
-    def perform_update(self,input)  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
+    def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
         
     # Compared to theirs, I removed the resizing stuff... By removing resizing from theres, everything seemms to be working as normal

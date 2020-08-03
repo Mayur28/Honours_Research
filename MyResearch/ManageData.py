@@ -5,6 +5,8 @@ import cv2
 import imghdr
 import torchvision.transforms as transforms# Try to remove
 #I'm trying without handling the image path! Looks like this will need special attention when saving the images( This will come much later)
+from PIL import Image
+import numpy as np
 
 #Try to go the opencv route
 
@@ -23,7 +25,7 @@ def import_dataset(directory):
         for file_name in files:
             if  imghdr.what(directory+"/"+file_name)=='png' or  imghdr.what(directory+"/"+file_name)=='jpeg':
                 path = os.path.join(root, file_name)
-                img = cv2.imread(path,1)# Will be read in BGR!
+                img =Image.open(path).convert('RGB')# cv2.imread(path,1)# Will be read in BGR!
                 images.append(img)
     return images
 
@@ -39,7 +41,7 @@ class DataLoader:
     def __init__(self,opt):
         self.opt=opt
         self.dataset=MakeDataset(opt)
-        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, num_workers=8)
+        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, num_workers=6)
 
     def load(self):# This will return the iterable over the dataset
         return self.dataloader
@@ -77,10 +79,14 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         B_img=self.transform(B_img)
         
         input_img=A_img
-        A_gray=cv2.cvtColor(input_img,0)
-        A_gray=torch.unsqueeze(A_gray,0)
-        
-        return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}#,'A_paths': A_path, 'B_paths': B_path}
+        #A_gray=cv2.cvtColor(input_img,0)
+        #A_gray=torch.unsqueeze(A_gray,0)
+        r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
+        A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
+        A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a 
+
+
+        return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
     
     def __len__(self):
         return max(self.A_size,self.B_size)
