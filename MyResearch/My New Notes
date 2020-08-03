@@ -31,3 +31,6 @@ This is just temporary, be ruthless thereafter
 #Start with the above point tomorrow as it is pertinent!!!
  
  
+ Try to find a way to plot the loss after every xxx epochs
+ 
+ I particularly need to look into the get_target tensor function. There can be significant improvement

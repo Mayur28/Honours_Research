@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import random
 
 #SPICE EVERYTHING UP, TOO SIMILIAR!!!
 #Blend it with Mask Shadow GAN
@@ -104,16 +105,141 @@ class The_Model:
             self.old_lr=opt.lr
             self.model_loss=GANLoss() # They accept if we're using LSGAN and the type of tensore we're using ( These are standardized things in my implementation)
             
+            #Check if the below optimizers are set in accordance with Radford!
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.G_Disc_optimizer=torch.optim.Adam(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.L_Disc_opitimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            self.Gen.train()# Check if its really necessary
-
-            
-            
+            if self.opt.isTrain==False:
+                self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
+                
 		#G_A : Is our only generator
 		#D_A : Is the Global Discriminator
 		#D_P : Is the patch discriminator
+
+    def perform_update(self,input)  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
+        # forward
+        
+    # Compared to theirs, I removed the resizing stuff... By removing resizing from theres, everything seemms to be working as normal
+        self.A_imgs=input['A']
+        self.B_imgs=input['B']
+        self.A_gray=input['A_gray']
+        self.input_img=input['input_img']
+        
+        # Whatever comes below needs to be taken care of with extreme caution... Think everything through
+        
+        # This is for optimizing the generator.
+        self.forward()# This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
+        self.G_optimizer.zero_grad()# Check the positioning of this statement
+        self.backward_G()
+        
+        self.G_optimizer.step()
+        
+    def forward(self):
+        # Look into what the Variable stuff is for
+        # Change this stuff completely
+        self.real_A=Variable(self.input_A)#Variable is basically a tensor (which represents a node in the comp. graph) and is part of the autograd package to easily compute gradients
+		#Dont be confused my the 'real' appended to the start... real_A is the input_A low-light image
+        self.real_B=Variable(self.input_B) #This contains the normal-light images ( sort of our reference images)
+        self.real_A_gray=Variable(self.input_A_gray) # This is the attention map
+        self.real_img=Variable(self.input_img) #In our configuation, input_img=input_A
+        
+        
+        #print("Shape of real_A: %s " % self.real_A.size())
+        #print("Shape of real_B: %s " % self.real_B.size())
+        #print("Shape of real_A_gray: %s " % self.real_A_gray.size())
+        #print("Shape of real_img: %s " % self.real_img.size())
+        
+        #Make a prediction!
+        self.fake_B,self.latent_real_A=self.Gen.forward(self.real_img,self.real_A_gray)
+        
+        # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
+        w=self.real_A.size(3)
+        h=self.real_B.size(2)
+        
+        w_offset=random.randint(0,max(0,w-self.opt.patchSize-1))
+        h_offset=random.randint(0,max(0,h-self.opt.patchSize-1))
+        
+        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from?
+        self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize] # Patch from our enhanced result
+        self.real_patch=self.real_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize]# Path from the training set's normal light images
+        self.input_patch=self.real_A[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize]# patch from the training set's low-light images... I dont really see why do we need this though??
+        
+        # We now create a list of patches (the length of this list being determined by self.opt.patchD_3)    
+        
+        self.fake_patch_list=[]
+        self.real_patch_list=[]
+        self.input_patch_list=[]
+        
+        for i in range(self.opt.patchD_3):
+            w_offset=random.randint(0,max(0,w-self.opt.patchSize-1))
+            h_offset=random.randint(0,max(0,h-self.opt.patchSize-1))
+            
+            
+            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize])
+            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize])
+            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.self.opt.patchSize,w_offset:w_offset+self.opt.patchSize])
+            
+            # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
+            
+            #Verify if this is correct: Forward is called by the batch so is the forward function called once for a batch or is it call once for every element in the batch?
+           # Honestly dont think the patch stuff is really being handled in the best way right now...
+            # I think there backward G can be combine here... This will then represent a full pass of the network, representing a full pass thorugh the network, therefore, we'll be able to calculate the generators gradients after a single function.  COMBINE AFTER I GETTING A WORKING PROTOTYPE
+            
+    def backward_G():
+        # First let the discriminator make a prediction on the fake samples
+        #This is the part recommended by Radford where we test real and fake samples in stages
+        pred_fake=self.G_Disc.forward(self.fake_B)
+        pred_real=self.G_Disc.forward(self.real_B)
+        #CONFIRM THE SWITCHING STORY!!! What the hell is going on here? Why are the TERMS switched??? JUST THE ENTIRE FORM OF THE BELOW EXPRESSION LOOKS EXTREMELY FISHY!!! Note that we are taking the average ( dividing by 2 for some reason... Dont reason think this is necessary?!) Link this function to the __call__ function of GAN Loss
+        self.Gen_adv_loss= (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
+        
+        # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
+        
+        accum_gen_loss=0
+        #Still dont see the point of this...
+        pred_fake_patch=self.L_Disc.forward(self.fake_patch)
+        # We are definitely switching the label here because the patches are fake but we're setting the 'target_is_real' variable to True. Look into this in accordance with MLM plus others
+        
+        accum_gen_loss+=self.model_loss(pred_fake_patch,True)
+        
+        #Perform the predictions on the list of patches
+        for i in range(self.opt.patchD_3):
+            pred_fake_patch_list=self.L_Disc.forward(self.fake_patch_list[i])# Just check what is the shape of pred_fake_patch_list? Is it a single image or a batch?
+            
+            #Again this label seems to be switched
+            accum_gen_loss+=self.model_loss(pred_fake_patch_list,True)
+        #Check if the below statement is really necessary( the dividing part)
+        self.Gen_adv_loss+= accum_gen_loss/float(self.opt.patchD_3+1)
+        # This now contains the loss from propagting the entire image and now, we're adding the average loss from all the fake patchs
+        
+        # Check if we use the other patch lists
+        self.total_vgg_loss=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_B,self.real_A)*1.0 # This the vgg loss for the entire images!
+        
+        patch_loss_vgg=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_patch,self.input_patch)*1.0
+        # This is the vgg loss for the individual patch
+        # Check what its the diff between self.input_patch and self.real_patch? I think input_patch is the low-light patches and real_patches are the normal_light images,thats why I'd be wrong.
+        
+        for i in range(self.opt.patchD_3):
+            patch_loss_vgg+=self.vgg_loss.comput_vgg_loss(self.vgg,self.fake_patch_list[i],input_patch_list[i])*1.0
+        
+        self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3+1)
+        
+        self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss
+        self.Gen_loss.backward()# Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
+            
+        
+        
+        
+        
+                        
+        
+        
+        
+        
+        
+        
+        
+    
         
 #Im using LSGAN loss which is very similiar to mseloss, but what is the difference?
 class GANLoss(nn.Module):
@@ -122,8 +248,39 @@ class GANLoss(nn.Module):
         self.real_label=1.0
         self.fake_label=0.0
         #Check the need for the var stuff?
+        self.real_label_var=None
+        self.fake_label_var=None
         self.Tensor=torch.FloatTensor
         self.loss=nn.MSELoss()
+        
+        
+    #This function is absolute rubbish! Can be significantly improved!
+    def get_target_tensor(self,input,target_is_real):#This function basically creates a target label tensor which is used to compute the MSE in __call__.
+        target_tensor=None
+        if target_is_real:
+            #This is a boolean for whether we need to actually create a new label tensor
+            create_label=((self.real_label_var is None) or (self.real_label_var.numel()!=input.numel()))
+            
+            if create_label:
+                real_tensor=self.Tensor(input.size()).fill_(self.real_label)
+                #Check why do we need the variable function
+                self.real_label_var=Variable(real_tensor,requires_grad=False)
+        else:
+            create_label=((self.fake_label_var is None) or (self.fake_label_var.numel()!=input.numel()))
+            
+            if create_label:
+                fake_tensor=self.Tensor(input.size()).fill_(self.fake_label)
+                #Check why do we need the variable function
+                self.fake_label_var=Variable(fake_tensor,requires_grad=False)
+                target_tensor=self.fake_label_var
+        return target_tensor
+    
+    def __call__(self,input,target_is_real):
+        target_tensor=self.get_target_tensor(input,target_is_real)
+        return self.loss(input,target_tensor) # We then perform MSE on this!
+        
+                          
+        
         
     
         
