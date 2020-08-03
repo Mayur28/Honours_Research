@@ -245,8 +245,8 @@ class The_Model:
     
     def backward_D_basic(self,network,real,fake,use_ragan):
         # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
-        pred_fake=network.G_Disc(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
-        pred_real=network.G_Disc(real)
+        pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+        pred_real=network.forward(real)
         # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
         if(use_ragan):
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
@@ -679,8 +679,8 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
     def compute_vgg_loss(self,vgg_network,image,target):
         print("I am in Compute VGG_loss")
         print(image.shape)
-        image_vgg=cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
-        target_vgg=cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
+        image_vgg=vgg_preprocess(image,self.opt)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
+        target_vgg=vgg_preprocess(target,self.opt)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
         # Check if there is a work around this!
         
         img_feature_map=vgg(image_vgg,self.opt)# Get the feature map of the input image
@@ -741,7 +741,12 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
   
         
         
-
+def vgg_preprocess(batch, opt):
+    tensortype = type(batch.data)
+    (r, g, b) = torch.chunk(batch, 3, dim = 1)
+    batch = torch.cat((b, g, r), dim = 1) # convert RGB to BGR
+    batch = (batch + 1) * 255 * 0.5 # [-1, 1] -> [0, 255]
+    return batch
 
 def load_vgg(gpu_ids):
     vgg = Vgg()
