@@ -7,36 +7,42 @@ This is just temporary, be ruthless thereafter
 
  Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
  I AM working directly in BGR, only when saving for display images, save the image in RGB
- 
+
  Check if the config thing in EGAN is really necessary or not.
- 
+
  # There is a lot of varitation that can come out of the VGG functions
  Really make this my own! Experiment and only if really broken, revert to their altered form
- 
+
  Once everything seems to be working, see if I can form the generator programmatically! #--> I bookmarked the solution
- 
+
  A lot of the variation will also come from the generator's and discriminator's setup
- 
+
  Between adjusting the dataset and removing the config, we're doing fewer 'iterations' per an epoch but this hasn't affected the quality of performance ( also reduced the time to 78-80 sec)
- 
+
  Look at the alternate configurations of EGAN and experiment
- 
+
  Go beyond what I wanted and state how exactly do I want to improve this in the long run
- 
+
  Check if it is absolutely necessary to have skip connections in the Unet generator
- 
+
  Check what does the super thing mean
- 
- Try to understand how exactly to manourvre the input tensor (particularly in the get_target tensor function)
+
+ Try to understand how exactly to maneuver the input tensor (particularly in the get_target tensor function)
 #Start with the above point tomorrow as it is pertinent!!!
- 
- 
+
+
  Try to find a way to plot the loss after every xxx epochs
- 
+
  I particularly need to look into the get_target tensor function. There can be significant improvement
- 
+
  The handling of the backward functions for the discriminator can be significantly improved!
- 
+
  There is a conflict in using OpenCV ( one of them being unable to quickly convert the images to grayscale)
 
 Fix the __getitem__ function in ManageData. The swapping, inconsistency and not using OpenCV is a problem
+
+Go above and beyond of what they did... Be creative and include the graph of the loss...
+Remove all the GPU id stuff... Its just unneccesary clutter and I will probably just work on Colab permanently
+
+
+Fix the conversion functions ( TensorToImage,etc)... Right now, they are directly copied over!!!

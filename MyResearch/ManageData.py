@@ -32,7 +32,7 @@ def import_dataset(directory):
 def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop (THIS IS WHERE MY DATA AUGMENTATION WILL GO. RIGHT NOW, IM ONLY DOING RANDOM CROPPING)
     trans_list=[]
     trans_list.append(transforms.RandomCrop(opt.crop_size))
-    
+
     #To normalize the data to the range [-1,1]
     trans_list+=[transforms.ToTensor(),transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]# this is neat. Looking at one channel (column), we are specifying mean=std=0.5 which normalizes the images to [-1,1]
     return transforms.Compose(trans_list)
@@ -45,15 +45,15 @@ class DataLoader:
 
     def load(self):# This will return the iterable over the dataset
         return self.dataloader
-    
+
     #This function is compulsory when creating custom dataloaders!
     def __len__(self):
         return len(self.dataset)
-        
-    #Try to implement a __getitem__ to extract individual instances as well!
-    
 
-class FullDataset(data.Dataset):# I've inherited what I had to 
+    #Try to implement a __getitem__ to extract individual instances as well!
+
+
+class FullDataset(data.Dataset):# I've inherited what I had to
     # This class definitely needs to overwrite __len__ and  __getitem__
     def __init__(self,opt):
         super(FullDataset, self).__init__()
@@ -61,11 +61,11 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         #Form the path's to the data
         A_directory=os.path.join('../final_dataset',opt.phase+'A')
         B_directory=os.path.join('../final_dataset',opt.phase+'B')
-        
-        
+
+
         self.A_imgs = import_dataset(A_directory)
         self.B_imgs = import_dataset(B_directory)
-        
+
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)
@@ -77,17 +77,41 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         #B_path=self.B_paths[index% self.B_size]
         A_img=self.transform(A_img)#This is where we actually perform the transformation
         B_img=self.transform(B_img)
-        
+
         input_img=A_img
         #A_gray=cv2.cvtColor(input_img,0)
         #A_gray=torch.unsqueeze(A_gray,0)
         r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
         A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
-        A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a 
+        A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a
 
 
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
-    
+
     def __len__(self):
         return max(self.A_size,self.B_size)
-        
+
+# Right now, this is directly copied over, NEEDS TO BE REDONE URGENTLY!!!
+# Improve the implementation here( vast amount of rom from improvement here!)
+def TensorToImage(img_tensor,imtype=np.uint8):
+    usable_images=img_tensor[0].cpu().float().numpy()
+    usable_images=(np.transpose(usable_images, (1, 2, 0)) + 1) / 2.0 * 255.0
+    usable_images=np.maximum(img_tensor,0)
+    usable_images=np.minimum(img_tensor,255)
+    return usable_images.astype(imtype)
+
+# Find out exactly what is going on here( detaching and manipulating???)
+def AttentionToImage(img_tensor,imtype=np.uint8):
+    tensor=img_tensor[0]
+    tensor=torch.cat((tensor, tensor, tensor), 0)
+    usable_images=tensor.cpu().float().numpy()
+    usable_images = (np.transpose(usable_images, (1, 2, 0))) * 255.0
+    usable_images = usable_images/(usable_images.max()/255.0)
+    return usable_images.astype(imtype)
+
+def LatentToImage(img_tensor,imtype=np.uint8):
+    usable_images = img_tensor[0].cpu().float().numpy()
+    usable_images = (np.transpose(usable_images, (1, 2, 0))) * 255.0
+    usable_images = np.maximum(usable_images, 0)
+    usable_images = np.minimum(usable_images, 255)
+    return usable_images.astype(imtype)
