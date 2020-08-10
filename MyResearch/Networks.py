@@ -4,6 +4,8 @@ import torch.nn.functional as F
 import random
 from torch.autograd import Variable
 from ManageData import TensorToImage, LatentToImage, AttentionToImage
+import os
+from collections import OrderedDict
 
 
 
@@ -285,7 +287,7 @@ class The_Model:
         Gen=self.Gen_loss.item()
         Global_disc=self.G_Disc_loss.item()
         Local_disc=self.L_Disc_loss.item()
-        vgg=self.total_vgg_loss.item()/self.opt.vgg
+        vgg=self.total_vgg_loss.item()/1.0
         return OrderedDict([('Gen',Gen),('G_Disc',Global_disc),('L_Disc',Local_disc),('vgg',vgg)])
 
     def for_displaying_images(self):
@@ -298,14 +300,19 @@ class The_Model:
         latent_real_A=TensorToImage(self.latent_real_A.data)
         latent_show=LatentToImage(self.latent_real_A.data)
 
+        fake_patch = TensorToImage(self.fake_patch.data)
+        real_patch = TensorToImage(self.real_patch.data)
+
+        input_patch = TensorToImage(self.input_patch.data)
+
         self_attention= AttentionToImage(self.real_A_gray.data)
-        return OrderedDict([('real_A',real_A),('fake_B',fake_B)])
+        return OrderedDict([('real_A', real_A), ('fake_B', fake_B), ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_B', real_B), ('real_patch', real_patch),('fake_patch', fake_patch), ('input_patch', input_patch), ('self_attention', self_attention)])
 
     def save_network(self,network,label,epoch):
         save_name='%s_net_%s.pth' %(epoch,label)
         save_path=os.path.join(self.save_dir,save_name)
         torch.save(network.cpu().state_dict(),save_path)
-        network.cuda(device=gpu_ids[0])
+        network.cuda(device=self.opt.gpu_ids[0])
 
 
     def save_model(self,label):

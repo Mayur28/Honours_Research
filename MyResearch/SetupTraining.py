@@ -5,6 +5,8 @@ import argparse
 class SetupTraining():
     def __init__(self):
         self.parser=argparse.ArgumentParser()
+        self.parser.add_argument('--name', type=str, default='TheModel', help="Name of the current execution")
+        self.parser.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
         # These are the BaseOptions (Change the 'help' eventually!)
         #self.parser.add_argument('--dataroot', required=True, help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
         self.parser.add_argument('--batch_size', type=int, default=1, help='input batch size (One of the aspects that can be used to control GPU requirements)')
@@ -19,8 +21,8 @@ class SetupTraining():
         self.parser.add_argument('--norm_type', type=str, default='batch', help='instance normalization or batch normalization')
         # We are only cropping, experiment with the other options here!
         self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
-        
-        
+
+
         self.parser.add_argument('--skip', type=float, default=0.8, help='B = net.forward(A) + skip*A')
         self.parser.add_argument('--use_mse', action='store_true', help='MSELoss')
         # use_norm will be set to true by default
@@ -62,7 +64,7 @@ class SetupTraining():
         self.parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
         self.parser.add_argument('--config', type=str, default='configs/unit_gta2city_folder.yaml', help='Path to the config file.')
         self.isTrain = True
-        
+
 
     def parse(self):
         self.opt = self.parser.parse_args()
@@ -74,7 +76,7 @@ class SetupTraining():
             id = int(str_id)
             if id >= 0:
                 self.opt.gpu_ids.append(id)
-        
+
         # set gpu ids
         if len(self.opt.gpu_ids) > 0:
             torch.cuda.set_device(self.opt.gpu_ids[0])

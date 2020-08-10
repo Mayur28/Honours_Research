@@ -96,8 +96,8 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 def TensorToImage(img_tensor,imtype=np.uint8):
     usable_images=img_tensor[0].cpu().float().numpy()
     usable_images=(np.transpose(usable_images, (1, 2, 0)) + 1) / 2.0 * 255.0
-    usable_images=np.maximum(img_tensor,0)
-    usable_images=np.minimum(img_tensor,255)
+    usable_images=np.maximum(usable_images,0)
+    usable_images=np.minimum(usable_images,255)
     return usable_images.astype(imtype)
 
 # Find out exactly what is going on here( detaching and manipulating???)
