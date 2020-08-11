@@ -126,12 +126,25 @@ class The_Model:
 
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
-
+    #This was directly copied over because the the stuff towards the bottom seemed necessary
     # Compared to theirs, I removed the resizing stuff... By removing resizing from theres, everything seemms to be working as normal
-        self.A_imgs=input['A']
-        self.B_imgs=input['B']
-        self.A_gray=input['A_gray']
-        self.input_img=input['input_img']
+        input_A=input['A']
+        input_B=input['B']
+        input_A_gray=input['A_gray']
+        input_img=input['input_img']
+
+        print("Im in set input")
+        print(input_A.shape)
+        print(input_A_gray.shape)
+
+        self.input_A.resize_(input_A.size()).copy_(input_A)
+        self.input_B.resize_(input_B.size()).copy_(input_B)
+        self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
+        self.input_img.resize_(input_img.size()).copy_(input_img)
+
+        print("Im in perform update function")
+        print(self.input_A.shape)
+        print(self.input_A_gray.shape)
 
         # Whatever comes below needs to be taken care of with extreme caution... Think everything through
 
@@ -193,7 +206,6 @@ class The_Model:
             w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
             h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
 
-
             self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
             self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
             self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
@@ -239,7 +251,7 @@ class The_Model:
         # Check what its the diff between self.input_patch and self.real_patch? I think input_patch is the low-light patches and real_patches are the normal_light images,thats why I'd be wrong.
 
         for i in range(self.opt.patchD_3):
-            patch_loss_vgg+=self.vgg_loss.comput_vgg_loss(self.vgg,self.fake_patch_list[i],input_patch_list[i])*1.0
+            patch_loss_vgg+=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_patch_list[i],self.input_patch_list[i])*1.0
 
         self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3+1)
 

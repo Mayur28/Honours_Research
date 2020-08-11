@@ -86,6 +86,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
         A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a
 
+
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
 
     def __len__(self):
