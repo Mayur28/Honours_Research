@@ -26,7 +26,7 @@ class SetupTraining():
         self.parser.add_argument('--skip', type=float, default=1.0, help='B = net.forward(A) + skip*A')
         self.parser.add_argument('--use_mse', action='store_true', help='MSELoss')
         # use_norm will be set to true by default
-        self.parser.add_argument('--use_ragan', action='store_true', help='use ragan')
+        self.parser.add_argument('--use_ragan', default=True, action='store_true', help='use ragan')
         #Sort out the VGG stuff!
         self.parser.add_argument('--vgg', type=float, default=1.0, help='use perceptrual loss')
  # vgg_mean was false!
@@ -48,7 +48,7 @@ class SetupTraining():
         self.parser.add_argument('--D_P_times2', action='store_true', help='loss_D_P *= 2')
         self.parser.add_argument('--patch_vgg', default=True, action='store_true', help='use vgg loss between each patch')
         self.parser.add_argument('--hybrid_loss', action='store_true', help='use lsgan and ragan separately')
-        self.parser.add_argument('--self_attention', action='store_true', help='adding attention on the input of generator')
+        self.parser.add_argument('--self_attention', default= True,  action='store_true', help='adding attention on the input of generator')
         # We have this!
         self.parser.add_argument('--times_residual', action='store_true', help='output = input + residual*attention')
         #Now, the proper training options
