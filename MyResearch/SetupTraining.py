@@ -9,9 +9,9 @@ class SetupTraining():
         self.parser.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
         # These are the BaseOptions (Change the 'help' eventually!)
         #self.parser.add_argument('--dataroot', required=True, help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
-        self.parser.add_argument('--batch_size', type=int, default=1, help='input batch size (One of the aspects that can be used to control GPU requirements)')
-        self.parser.add_argument('--crop_size', type=int, default=256, help='Crop the images to this new size')
-        self.parser.add_argument('--patch_size', type=int, default=64, help='specifies the size of the patch that we are going to use')
+        self.parser.add_argument('--batch_size', type=int, default=16, help='input batch size (One of the aspects that can be used to control GPU requirements)')
+        self.parser.add_argument('--crop_size', type=int, default=320, help='Crop the images to this new size')
+        self.parser.add_argument('--patch_size', type=int, default=32, help='specifies the size of the patch that we are going to use')
         self.parser.add_argument('--gpu_ids', type=str, default='0', help="Used to specify the ID's of the GPU's to be used (e.g 0,1 if 2 GPU's are used)")
         #Ours will alls be in accordance with the unaligned dataset
         # We are only using the single_model
@@ -28,22 +28,22 @@ class SetupTraining():
         # use_norm will be set to true by default
         self.parser.add_argument('--use_ragan', action='store_true', help='use ragan')
         #Sort out the VGG stuff!
-        self.parser.add_argument('--vgg', type=float, default=0, help='use perceptrual loss')
+        self.parser.add_argument('--vgg', type=float, default=1, help='use perceptrual loss')
  # vgg_mean was false!
 # vgg_choose will be set to relu5_3. Remove the if-statements in networks.py
 #no_vgg_instance=False
  # vgg_maxpooling=False
     # In vgg is false
     # use_avgpool specifies if we use average or max pooling... Experiment with this!
-        self.parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
-        self.parser.add_argument('--n_layers_patchD', type=int, default=3, help='only used if which_model_netD==n_layers')
+        self.parser.add_argument('--n_layers_D', type=int, default=5, help='only used if which_model_netD==n_layers')
+        self.parser.add_argument('--n_layers_patchD', type=int, default=4, help='only used if which_model_netD==n_layers')
         self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptrual loss')
         self.parser.add_argument('--instance_norm', type=float, default=0, help='use instance normalization')
         # I want tanh at the end of mine!
         # noise will be set to 0 by default
         #input_linear is false
         #patchD will be True by default
-        self.parser.add_argument('--patchD_3', type=int, default=0, help='choose the number of crop for patch discriminator')
+        self.parser.add_argument('--patchD_3', type=int, default=5, help='choose the number of crop for patch discriminator')
         # We use D_P_times2, but look into it further. The vgg stuff can be considerably simplified.
         self.parser.add_argument('--D_P_times2', action='store_true', help='loss_D_P *= 2')
         self.parser.add_argument('--patch_vgg', action='store_true', help='use vgg loss between each patch')

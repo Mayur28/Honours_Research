@@ -67,10 +67,6 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         self.B_imgs = import_dataset(B_directory)
 
 
-        test_image=self.A_imgs[0]
-        test_image.save(opt.img_dir+"WHy not working.png")
-        print(np.min(test_image))
-        print(np.max(test_image))
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)

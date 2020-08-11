@@ -163,7 +163,7 @@ class The_Model:
         self.real_A_gray=Variable(self.input_A_gray) # This is the attention map
         self.real_img=Variable(self.input_img) #In our configuation, input_img=input_A
 
-
+        display_current_results(TensorToImage(self.real_A))
         #print("Shape of real_A: %s " % self.real_A.size())
         #print("Shape of real_B: %s " % self.real_B.size())
         #print("Shape of real_A_gray: %s " % self.real_A_gray.size())
