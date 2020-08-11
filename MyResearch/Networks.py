@@ -133,9 +133,6 @@ class The_Model:
         input_A_gray=input['A_gray']
         input_img=input['input_img']
 
-        print("Im in set input")
-        print(input_A.shape)
-        print(input_A_gray.shape)
 
         self.input_A.resize_(input_A.size()).copy_(input_A)
         self.input_B.resize_(input_B.size()).copy_(input_B)
