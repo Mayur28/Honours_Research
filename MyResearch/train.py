@@ -46,11 +46,11 @@ def setupLogging(opt):
 
 opt=SetupTraining().parse()# This is obviously just a start, I can (and must) adjust it accordingly
 #Just check if I really need config!
+opt=setupLogging(opt)
 data_loader=DataLoader(opt)
 dataset=data_loader.load()
 print("Number of training Images: %d"% len(data_loader))
 
-opt=setupLogging(opt)
 the_model=Networks.The_Model(opt)
 
 total_steps=0

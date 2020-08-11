@@ -7,6 +7,7 @@ import torchvision.transforms as transforms# Try to remove
 #I'm trying without handling the image path! Looks like this will need special attention when saving the images( This will come much later)
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
 
 #Try to go the opencv route
 
@@ -20,7 +21,6 @@ def MakeDataset(opt):
 
 def import_dataset(directory):
     images = []# This seems to  be the way to go...
-
     for root, _, files in sorted(os.walk(directory)):
         for file_name in files:
             if  imghdr.what(directory+"/"+file_name)=='png' or  imghdr.what(directory+"/"+file_name)=='jpeg':
@@ -66,6 +66,11 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         self.A_imgs = import_dataset(A_directory)
         self.B_imgs = import_dataset(B_directory)
 
+
+        test_image=self.A_imgs[0]
+        test_image.save(opt.img_dir+"WHy not working.png")
+        print(np.min(test_image))
+        print(np.max(test_image))
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)
@@ -84,7 +89,6 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
         A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
         A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a
-        plt.imsave(str(opt.save_dir+randint()+str(".png"),A_img)
 
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
 
