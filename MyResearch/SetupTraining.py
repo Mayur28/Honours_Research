@@ -23,12 +23,12 @@ class SetupTraining():
         self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
 
 
-        self.parser.add_argument('--skip', type=float, default=0.8, help='B = net.forward(A) + skip*A')
+        self.parser.add_argument('--skip', type=float, default=1.0, help='B = net.forward(A) + skip*A')
         self.parser.add_argument('--use_mse', action='store_true', help='MSELoss')
         # use_norm will be set to true by default
         self.parser.add_argument('--use_ragan', action='store_true', help='use ragan')
         #Sort out the VGG stuff!
-        self.parser.add_argument('--vgg', type=float, default=1, help='use perceptrual loss')
+        self.parser.add_argument('--vgg', type=float, default=1.0, help='use perceptrual loss')
  # vgg_mean was false!
 # vgg_choose will be set to relu5_3. Remove the if-statements in networks.py
 #no_vgg_instance=False
@@ -46,7 +46,7 @@ class SetupTraining():
         self.parser.add_argument('--patchD_3', type=int, default=5, help='choose the number of crop for patch discriminator')
         # We use D_P_times2, but look into it further. The vgg stuff can be considerably simplified.
         self.parser.add_argument('--D_P_times2', action='store_true', help='loss_D_P *= 2')
-        self.parser.add_argument('--patch_vgg', action='store_true', help='use vgg loss between each patch')
+        self.parser.add_argument('--patch_vgg', default=True, action='store_true', help='use vgg loss between each patch')
         self.parser.add_argument('--hybrid_loss', action='store_true', help='use lsgan and ragan separately')
         self.parser.add_argument('--self_attention', action='store_true', help='adding attention on the input of generator')
         # We have this!
