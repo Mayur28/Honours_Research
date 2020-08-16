@@ -32,7 +32,7 @@ class SetupTraining():
         self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
 
 
-        self.parser.add_argument('--skip', type=float, default=1.0, help='B = net.forward(A) + skip*A')
+        self.parser.add_argument('--skip', default=True, help='B = net.forward(A) + skip*A')
         self.parser.add_argument('--use_mse', action='store_true', help='MSELoss')
         # use_norm will be set to true by default
         self.parser.add_argument('--use_ragan', default=True, action='store_true', help='use ragan')
@@ -70,7 +70,8 @@ class SetupTraining():
         self.parser.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
         self.parser.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
         self.parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
-        self.parser.add_argument('--lr', type=float, default=0.0001, help='initial learning rate for adam')
+        self.parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
+        # EGAN used 0.0001 but Radford recommended 0.0002
         self.parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
         # Configure the pool size, what exactly does it do?
         self.parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
@@ -121,4 +122,5 @@ class SetupTraining():
             now = time.strftime("%c")
             log_file.write('================ Training Loss (%s) ================\n' % now)
 
+        self.opt.save_dir=os.path.join(opt.checkpoints_dir,opt.name)
         return self.opt

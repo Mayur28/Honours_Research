@@ -39,7 +39,6 @@ This is just temporary, be ruthless thereafter
 
  There is a conflict in using OpenCV ( one of them being unable to quickly convert the images to grayscale)
 
-Fix the __getitem__ function in ManageData. The swapping, inconsistency and not using OpenCV is a problem
 
 Go above and beyond of what they did... Be creative and include the graph of the loss...
 Remove all the GPU id stuff... Its just unneccesary clutter and I will probably just work on Colab permanently
@@ -57,3 +56,9 @@ New Notes from Setup Training function
 #the attention map calculation...
 # Theres actually a lot that I removed from 'UnalignedDataset' that appears to relate to data augmentation... Experiment with this
 # What does pool_size do and affect results?
+
+What is the effect of the rate of convergence on the quality of the Output
+# Focus on reducing noise!
+ I have to thoroughly understand the difference between a normal GAN, using MSE loss and LSGAN( I am using an LSGAN)... Look into
+ why this is a good choice!
+ Check difference between Variable and Tensor (seems to have something to do with how gradients are calculated but surely tensors are also capable?)

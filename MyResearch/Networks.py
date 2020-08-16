@@ -7,14 +7,12 @@ from ManageData import TensorToImage, LatentToImage, AttentionToImage
 import os
 from collections import OrderedDict
 
-
-
-
 #SPICE EVERYTHING UP, TOO SIMILIAR!!!
 #Blend it with Mask Shadow GAN
 # Find other papers as well
 # Do with my own understanding!!!
 #This is just temporary, be ruthless thereafter
+# Check what would be the story when testing? Would a networks be created( sound silly but isnt!)
 
 # Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
 
@@ -71,38 +69,28 @@ def weights_init(model):
         torch.nn.init.normal_(model.weight.data,1.0,0.02)
         torch.nn.init.constant_(model.bias.data,0.0)
 
-class The_Model:
+class The_Model: # This is the grand model that encompasses everything ( the generator, both discriminators and the VGG network)
     def __init__(self,opt):
 
         self.opt=opt
-        self.save_dir=os.path.join(opt.checkpoints_dir,opt.name)
-        # Wherever below varibales are needed, just access self.opt.gpu_ids instead!
-        #self.gpu_ids=opt.gpu_ids
-        #self.isTrain=opt.isTrain
-        #Still need to set the save directory
 
-        # Initialize the data structures to hold all each type of image
-        batch_size=opt.batch_size
-        new_dim=opt.crop_size
         #I'm assuming that a CUDA GPU is used.
-        self.input_A=torch.cuda.FloatTensor(batch_size,3,new_dim,new_dim)#We are basically creating a tensor to store 16 low-light colour images with size crop_size x crop_size
-        self.input_B=torch.cuda.FloatTensor(batch_size,3,new_dim,new_dim)# Same as above but now for storing the normal-light images (NOT THE RESULT!)
-        self.input_img=torch.cuda.FloatTensor(batch_size,3,new_dim,new_dim)
-        self.input_A_gray=torch.cuda.FloatTensor(batch_size,1,new_dim,new_dim)# this is for the attention maps
+        self.input_A=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)#We are basically creating a tensor to store 16 low-light colour images with size crop_size x crop_size
+        self.input_B=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)# Same as above but now for storing the normal-light images (NOT THE RESULT!)
+        self.input_img=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)
+        self.input_A_gray=torch.cuda.FloatTensor(opt.batch_size,1,opt.crop_size,opt.crop_size)# this is for the attention maps
 
         self.vgg_loss=PerceptualLoss(opt) # Use the alternate implementation when experimenting
         self.vgg_loss.cuda()#--> Shift to the GPU
 
         self.vgg=load_vgg(self.opt.gpu_ids)#This is for data parallelism
-        #Actually load the VGG model(THIS IS CRUCIAL!)
         self.vgg.eval() # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
         #The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makes sense)
         #I'm setting it to eval() because it's not being trained in anyway
 
         for weights in self.vgg.parameters():# THIS IS THE BEST WHY OF DOING THIS
-                weights.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
+            weights.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
 
-        opt.skip=True#--> Not needed because this will be in the training setting?
 
         self.Gen=make_G(opt)
 
@@ -110,7 +98,6 @@ class The_Model:
             self.G_Disc=make_Disc(opt,False) # This declaration should have a patch option because they have different number of layers each.
             self.L_Disc=make_Disc(opt,True) # Check if this switch is working correctly or not!
 
-            self.old_lr=opt.lr
             self.model_loss=GANLoss() # They accept if we're using LSGAN and the type of tensore we're using ( These are standardized things in my implementation)
 
             #Check if the below optimizers are set in accordance with Radford!
@@ -120,20 +107,17 @@ class The_Model:
             if self.opt.isTrain==False:
                 self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
 
-		#G_A : Is our only generator
-		#D_A : Is the Global Discriminator
-		#D_P : Is the patch discriminator
+
 
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
     #This was directly copied over because the the stuff towards the bottom seemed necessary
-    # Compared to theirs, I removed the resizing stuff... By removing resizing from theres, everything seemms to be working as normal
         input_A=input['A']
         input_B=input['B']
         input_A_gray=input['A_gray']
         input_img=input['input_img']
 
-
+        # This is extremely important and confusing!
         self.input_A.resize_(input_A.size()).copy_(input_A)
         self.input_B.resize_(input_B.size()).copy_(input_B)
         self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
@@ -163,9 +147,8 @@ class The_Model:
 
     def forward(self):
         # Look into what the Variable stuff is for
-        # Change this stuff completely
+
         self.real_A=Variable(self.input_A)#Variable is basically a tensor (which represents a node in the comp. graph) and is part of the autograd package to easily compute gradients
-		#Dont be confused my the 'real' appended to the start... real_A is the input_A low-light image
         self.real_B=Variable(self.input_B) #This contains the normal-light images ( sort of our reference images)
         self.real_A_gray=Variable(self.input_A_gray) # This is the attention map
         self.real_img=Variable(self.input_img) #In our configuation, input_img=input_A
@@ -176,6 +159,7 @@ class The_Model:
         #print("Shape of real_img: %s " % self.real_img.size())
 
         #Make a prediction!
+        # What is the latent used for?
         self.fake_B,self.latent_real_A= self.Gen.forward(self.real_img,self.real_A_gray)
 
         # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
@@ -315,7 +299,7 @@ class The_Model:
 
     def save_network(self,network,label,epoch):
         save_name='%s_net_%s.pth' %(epoch,label)
-        save_path=os.path.join(self.save_dir,save_name)
+        save_path=os.path.join(self.opt.save_dir,save_name)
         torch.save(network.cpu().state_dict(),save_path)
         network.cuda(device=self.opt.gpu_ids[0])
 
@@ -343,20 +327,6 @@ def make_Disc(opt,patch):
     return discriminator
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-#Im using LSGAN loss which is very similiar to mseloss, but what is the difference?
 class GANLoss(nn.Module):
     def __init__(self):
         super(GANLoss,self).__init__()
@@ -405,24 +375,17 @@ class GANLoss(nn.Module):
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
-
-
-
-
-
-
 class Unet_generator1(nn.Module):
     def __init__(self,opt):
         super(Unet_generator1,self).__init__()
 
         self.opt=opt
-        # They explicitly set self.skip=skip, doesnt seem necessary
-        # Surely I only need one of the MaxPooling layers, they area pretty much identical!
+        # Surely I only need one of the MaxPooling layers, they are pretty much identical!
         # These will be used to resize the attention map to fit the latent result at each upsampling step
-        self.resized_att1 = nn.MaxPool2d(2)# This is seperate( this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
-        self.resized_att2 = nn.MaxPool2d(2)
-        self.resized_att3 = nn.MaxPool2d(2)
-        self.resized_att4 = nn.MaxPool2d(2)
+        # Try to avoid MaxPool and duplicacy
+        self.att_downsize = nn.MaxPool2d(2)# This is seperate (this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
+
+        # I must just create a function to create these module. Ridiculously shoddy!
 
         self.conv1_1=nn.Conv2d(4,32,3,padding=1)# 4 because of the the RGB image and the attention map...
         self.LRelu1_1=nn.LeakyReLU(0.2,inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
@@ -430,7 +393,6 @@ class Unet_generator1(nn.Module):
             self.norm1_1=nn.BatchNorm2d(32)
         else:
             self.norm1_1=nn.InstanceNorm2d(32)
-
         self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
         self.LRelu1_2 = nn.LeakyReLU(0.2, inplace=True)
         if (self.opt.norm_type=='Batch'):
@@ -438,7 +400,6 @@ class Unet_generator1(nn.Module):
         else:
             self.norm1_2=nn.InstanceNorm2d(32)
         self.max_pool1 = nn.MaxPool2d(2)# Try to get rid of this form of downsampling (Read Radford)
-
 
 
         self.conv2_1=nn.Conv2d(32,64,3,padding=1)
@@ -505,8 +466,8 @@ class Unet_generator1(nn.Module):
 
         #The bottleneck has been reached, we now enter the decoder. We need to now upsample to produce the sample.
         # self.deconv5 = nn.ConvTranspose2d(512, 256, 2, stride=2)# IT SEEMS THAT THEY ALREADY ATTEMPTED WHAT I WANTED TO DO( USE THE TRANSPOSE CONV LAYER TO UPSAMPLE)
-        self.deconv5 = nn.Conv2d(512, 256, 3, padding=1)#This is apparently referred to as a bilinear upsampling layer.(According to the paper). This apparently gets rid of checkerboard effects
-        self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1)# Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
+        self.deconv5 = nn.Conv2d(512, 256, 3, padding=1) # Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
+        self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1) # In the forward pass, this will be used with the bilinear parameter
         self.LRelu6_1 = nn.LeakyReLU(0.2, inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm6_1 =  nn.BatchNorm2d(256)
@@ -561,8 +522,8 @@ class Unet_generator1(nn.Module):
         self.LRelu9_2=nn.LeakyReLU(0.2,inplace=True)
 
         self.conv10=nn.Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
-
-        self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
+        # Look into this tanh function to ensure that we are withing [-1,1]
+        #self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
 
     def forward(self,input,gray):
         flag=0
@@ -580,15 +541,18 @@ class Unet_generator1(nn.Module):
         gray, pad_left, pad_right,pad_top, pad_bottom=pad_tensor(gray)
 
         # First downsample the attention map for all stages
-        gray_2=self.resized_att1(gray)
-        gray_3=self.resized_att2(gray_2)
-        gray_4=self.resized_att3(gray_3)
-        gray_5=self.resized_att4(gray_4)
+        gray_2=self.att_downsize(gray)
+        gray_3=self.att_downsize(gray_2)
+        gray_4=self.att_downsize(gray_3)
+        gray_5=self.att_downsize(gray_4)
 
-        #print("Gray_2 size: %s" % str(gray_2.size()))
-        #print("Gray_3 size: %s" % str(gray_3.size()))
-        #print("Gray_4 size: %s" % str(gray_4.size()))
-        #print("Gray_5 size: %s" % str(gray_5.size()))
+        print("Gray_2 size: %s" % str(gray_2.size()))
+        print("Gray_3 size: %s" % str(gray_3.size()))
+        print("Gray_4 size: %s" % str(gray_4.size()))
+        print("Gray_5 size: %s" % str(gray_5.size()))
+
+        print("Input Size: In forward() of generator")
+        print(input.size())
 
         #Surely below can be automated!!!, do right at the end when I know what I'm doing!
         x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
@@ -639,13 +603,17 @@ class Unet_generator1(nn.Module):
         x=self.norm9_1(self.LRelu9_1(self.conv9_1(up9)))
         conv9=self.LRelu9_2(self.conv9_2(x))
 
+        # At the stage, we are going from 32 filters to 3 filters, but dont be fooled by the numbers, the sizes are getting larger!
+        # The latent should be a 3-channel image
         latent = self.conv10(conv9)# What is this for?
+        print("Latent Size")
+        print(latent.size())
 
         latent = latent*gray
 
         #if self.opt.tanh:
         #    latent = self.tanh(latent)# Oddly does not apply to us
-        output = latent + input*self.opt.skip# This is a breakthrough! The latent result is added to the low-light image to form the output.
+        output = latent + input*float(self.opt.skip)# This is a breakthrough! The latent result is added to the low-light image to form the output.
 
 
         output = pad_tensor_back(output, pad_left, pad_right, pad_top, pad_bottom)
@@ -662,20 +630,19 @@ class PatchGAN(nn.Module):
         super(PatchGAN, self).__init__()
 
         self.opt=opt
-        if(patch==True):
+        if patch:
             no_layers=self.opt.n_layers_patchD
         else:
             no_layers=self.opt.n_layers_D
 
-        ndf=64
-
-
         sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2),nn.LeakyReLU(0.2,True)]
-
         # The rubbish below can be modified!
-        #Filter out this rubbish
+        #Filter out this rubbish ( Warning 1 - its the simple input output procedure)
+        # Output collapses from 512 - 1... Check what does the 1 activation map represent
+        # Needs to be completely restructured according to Radford
+        # Check if we need to include sigmoid at the end?
         # Look at flagship papers, as well as morphing EGAN's alternate implementations and get ideas from other papers
-
+        ndf=64
         nf_mult=1
         nf_mult_prev=1
         for n in range(1,no_layers):
