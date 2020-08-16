@@ -6,19 +6,15 @@ import time
 import os
 
 
-
-def save_img(image_path,the_image):
-    image_pil=Image.fromarray(the_image)
-    image_pil.save(image_path)
-
 def display_current_results(images,epoch):
     for label,image in images.items():
         img_path=os.path.join(opt.img_dir,'epoch%.3d_%s.png'%(epoch,label))
-        save_img(img_path,image)
+        image_pil=Image.fromarray(image)
+        image_pil.save(img_path)
 
 def print_errors(epoch,i,errors,t):
     message='(epoch: %d, iters: %d, time: %.3f)'%(epoch,i,t)
-    for k,v in errors.items():
+    for k,v in errors.items():# --> This is to extract from the Ordered Dictionary
         message+= '%s: %.3f ' % (k, v)
     print(message)
     with open(opt.log_name, "a") as log_file:

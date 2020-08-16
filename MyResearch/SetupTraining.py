@@ -1,6 +1,7 @@
 import os
 import torch
 import argparse
+import time
 
 #(Change the 'help' eventually!)
 # vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used

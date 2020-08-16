@@ -46,3 +46,14 @@ Remove all the GPU id stuff... Its just unneccesary clutter and I will probably 
 
 
 Fix the conversion functions ( TensorToImage,etc)... Right now, they are directly copied over!!!
+
+New Notes from Setup Training function
+#(Change the 'help' eventually!)
+# vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
+# Examine their multiple approaches again and try to combine uniquely
+# They are using maxpooling in the generator, not avg_pooling... Check Radford's appraoch to downsampling
+# I want tanh at the end of mine!--> Check if this would break the definition of an LSGAN
+# Default setting doesn't use 'lighten' which normalizes the attention map... Experiment with this! Only appears just before
+#the attention map calculation...
+# Theres actually a lot that I removed from 'UnalignedDataset' that appears to relate to data augmentation... Experiment with this
+# What does pool_size do and affect results?

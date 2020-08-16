@@ -4,7 +4,6 @@ import torch.utils.data as data
 import cv2
 import imghdr
 import torchvision.transforms as transforms# Try to remove
-#I'm trying without handling the image path! Looks like this will need special attention when saving the images( This will come much later)
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
@@ -69,22 +68,21 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
-        self.transform=config_transforms(opt)
+        self.transform=config_transforms(opt)#--> Experiment with data augmentation
 
     def __getitem__(self,index):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]
-        #A_path=self.A_paths[index% self.A_size]
-        #B_path=self.B_paths[index% self.B_size]
+
         A_img=self.transform(A_img)#This is where we actually perform the transformation
         B_img=self.transform(B_img)
 
         input_img=A_img
-        #A_gray=cv2.cvtColor(input_img,0)
-        #A_gray=torch.unsqueeze(A_gray,0)
-        r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
+        A_gray=cv2.cvtColor(input_img,0)
+        A_gray=torch.unsqueeze(A_gray,0)
+        #r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
         A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
-        A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a
+        #A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a
 
 
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
