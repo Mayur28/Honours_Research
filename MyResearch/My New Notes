@@ -62,3 +62,10 @@ What is the effect of the rate of convergence on the quality of the Output
  I have to thoroughly understand the difference between a normal GAN, using MSE loss and LSGAN( I am using an LSGAN)... Look into
  why this is a good choice!
  Check difference between Variable and Tensor (seems to have something to do with how gradients are calculated but surely tensors are also capable?)
+Augment tensorboard!!!
+I dont need to go all the way to 200 epochs
+Overhaul the entire structure is I were starting from scratch
+Check if data augmentation is really necessary when we have an abundance of unpaired data to train on!
+Do something truly different!
+Look into optimizing choice of batch size ( this seems very influential)... smaller batches= more significant changes per an update ( this is
+more noisy, though, the noise can help with the model's generalization capabilities)

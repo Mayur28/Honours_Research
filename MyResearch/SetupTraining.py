@@ -122,5 +122,5 @@ class SetupTraining():
             now = time.strftime("%c")
             log_file.write('================ Training Loss (%s) ================\n' % now)
 
-        self.opt.save_dir=os.path.join(opt.checkpoints_dir,opt.name)
+        self.opt.save_dir=os.path.join(self.opt.checkpoints_dir,self.opt.name)
         return self.opt

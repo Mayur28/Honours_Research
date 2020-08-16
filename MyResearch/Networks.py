@@ -160,25 +160,30 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         #Make a prediction!
         # What is the latent used for?
-        self.fake_B,self.latent_real_A= self.Gen.forward(self.real_img,self.real_A_gray)
+        self.fake_B,self.latent_real_A= self.Gen.forward(self.real_img,self.real_A_gray)# We forward prop. a batch at a time, not individual images in the batch!
 
         # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
         w=self.real_A.size(3)
         h=self.real_B.size(2)
-
+        # Remove this individual patch!
+        #The cropping can be done more professionally!
         w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
         h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
 
-        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from?
+        # Check if there is really a need for these seperate patches
+
+        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
         self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
         self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
         self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
-
-        # We now create a list of patches (the length of this list being determined by self.opt.patchD_3)
+        print("Size of the single patch")
+        print(self.fake_patch.size())
 
         self.fake_patch_list=[]
         self.real_patch_list=[]
         self.input_patch_list=[]
+
+        # This will basically create 5 batches (of 16 patches each)
 
         for i in range(self.opt.patchD_3):
             w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
@@ -189,15 +194,14 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
             self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
 
             # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
-
-            #Verify if this is correct: Forward is called by the batch so is the forward function called once for a batch or is it call once for every element in the batch?
            # Honestly dont think the patch stuff is really being handled in the best way right now...
-            # I think there backward G can be combine here... This will then represent a full pass of the network, representing a full pass thorugh the network, therefore, we'll be able to calculate the generators gradients after a single function.  COMBINE AFTER I GETTING A WORKING PROTOTYPE
 
     def backward_G(self):
         # First let the discriminator make a prediction on the fake samples
         #This is the part recommended by Radford where we test real and fake samples in stages
         pred_fake=self.G_Disc.forward(self.fake_B)
+        print("Disc output for fake input")
+        print(pred_fake)
         pred_real=self.G_Disc.forward(self.real_B)
         #CONFIRM THE SWITCHING STORY!!! What the hell is going on here? Why are the TERMS switched??? JUST THE ENTIRE FORM OF THE BELOW EXPRESSION LOOKS EXTREMELY FISHY!!! Note that we are taking the average ( dividing by 2 for some reason... Dont reason think this is necessary?!) Link this function to the __call__ function of GAN Loss
         self.Gen_adv_loss= (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
@@ -525,7 +529,7 @@ class Unet_generator1(nn.Module):
         # Look into this tanh function to ensure that we are withing [-1,1]
         #self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
 
-    def forward(self,input,gray):
+    def forward(self,input,gray): # We forward propagate a batch at a time!
         flag=0
         if input.size()[3] >2200:# This seems ridiculous! Test performance when this is removed
             avg=nn.avgPool2d(2)
@@ -546,13 +550,13 @@ class Unet_generator1(nn.Module):
         gray_4=self.att_downsize(gray_3)
         gray_5=self.att_downsize(gray_4)
 
-        print("Gray_2 size: %s" % str(gray_2.size()))
-        print("Gray_3 size: %s" % str(gray_3.size()))
-        print("Gray_4 size: %s" % str(gray_4.size()))
-        print("Gray_5 size: %s" % str(gray_5.size()))
 
-        print("Input Size: In forward() of generator")
-        print(input.size())
+        #Gray_2 size: torch.Size([16, 1, 160, 160])
+        #Gray_3 size: torch.Size([16, 1, 80, 80])
+        #Gray_4 size: torch.Size([16, 1, 40, 40])
+        #Gray_5 size: torch.Size([16, 1, 20, 20])
+
+        #Input Size: torch.Size([16, 3, 320, 320])
 
         #Surely below can be automated!!!, do right at the end when I know what I'm doing!
         x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
@@ -603,11 +607,8 @@ class Unet_generator1(nn.Module):
         x=self.norm9_1(self.LRelu9_1(self.conv9_1(up9)))
         conv9=self.LRelu9_2(self.conv9_2(x))
 
-        # At the stage, we are going from 32 filters to 3 filters, but dont be fooled by the numbers, the sizes are getting larger!
-        # The latent should be a 3-channel image
         latent = self.conv10(conv9)# What is this for?
-        print("Latent Size")
-        print(latent.size())
+        #Latent Size = torch.Size([16, 3, 320, 320])
 
         latent = latent*gray
 
@@ -663,24 +664,6 @@ class PatchGAN(nn.Module):
 
     def forward(self,input):
         return self.model(input)#<-- pass through the discriminator itself which is represented by self.model
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and have a forward() function
