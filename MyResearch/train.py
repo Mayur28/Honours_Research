@@ -24,29 +24,8 @@ def print_errors(epoch,i,errors,t):
     with open(opt.log_name, "a") as log_file:
         log_file.write('%s\n' % message)
 
-def setupLogging(opt):
-    opt.web_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web')
-    opt.img_dir = os.path.join(opt.web_dir, 'images')
-    print('create web directory %s...' % opt.web_dir)
-    if(os.path.isdir(opt.web_dir)==False):
-        os.mkdir(opt.web_dir)
-    if(os.path.isdir(opt.img_dir)==False):
-        os.mkdir(opt.img_dir)
-    #util.mkdirs([opt.web_dir, opt.img_dir])
-    opt.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
-    with open(opt.log_name, "a") as log_file:
-        now = time.strftime("%c")
-        log_file.write('================ Training Loss (%s) ================\n' % now)
-    return opt
 
-
-
-
-
-
-opt=SetupTraining().parse()# This is obviously just a start, I can (and must) adjust it accordingly
-#Just check if I really need config!
-opt=setupLogging(opt)
+opt=SetupTraining().process()
 data_loader=DataLoader(opt)
 dataset=data_loader.load()
 print("Number of training Images: %d"% len(data_loader))

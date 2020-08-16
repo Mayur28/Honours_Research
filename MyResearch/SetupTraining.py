@@ -76,7 +76,7 @@ class SetupTraining():
         self.isTrain = True
 
 
-    def parse(self): # This is sorted!
+    def process(self): # This is sorted!
         self.opt = self.parser.parse_args()
         self.opt.isTrain = self.isTrain
 
@@ -99,7 +99,7 @@ class SetupTraining():
 
         with open(file_name, 'wt') as opt_file:
             opt_file.write('------------ Options -------------\n')# First statement will print to the file
-            print('------------ Options -------------')# Seconf statement will print to terminal
+            print('------------ Options -------------')# Second statement will print to terminal
 
             for k, v in sorted(args.items()):
                 opt_file.write('%s: %s\n' % (str(k), str(v)))
@@ -107,5 +107,17 @@ class SetupTraining():
 
             opt_file.write('-------------- End ----------------\n')
             print('-------------- End ----------------')
+
+        self.opt.web_dir = os.path.join(self.opt.checkpoints_dir, self.opt.name, 'web')
+        self.opt.img_dir = os.path.join(self.opt.web_dir, 'images')
+        print('create web directory %s...' % self.opt.web_dir)
+        if(os.path.isdir(self.opt.web_dir)==False):
+            os.mkdir(self.opt.web_dir)
+        if(os.path.isdir(self.opt.img_dir)==False):
+            os.mkdir(self.opt.img_dir)
+        self.opt.log_name = os.path.join(self.opt.checkpoints_dir, self.opt.name, 'loss_log.txt')
+        with open(self.opt.log_name, "a") as log_file:
+            now = time.strftime("%c")
+            log_file.write('================ Training Loss (%s) ================\n' % now)
 
         return self.opt
