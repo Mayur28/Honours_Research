@@ -139,9 +139,6 @@ class The_Model:
         self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
         self.input_img.resize_(input_img.size()).copy_(input_img)
 
-        print("Im in perform update function")
-        print(self.input_A.shape)
-        print(self.input_A_gray.shape)
 
         # Whatever comes below needs to be taken care of with extreme caution... Think everything through
 
