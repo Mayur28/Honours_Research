@@ -8,7 +8,6 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 
-#Try to go the opencv route
 
 def DataLoader(opt):
     data_loader=DataLoader(opt)
@@ -74,15 +73,23 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]
 
+
         A_img=self.transform(A_img)#This is where we actually perform the transformation
         B_img=self.transform(B_img)
 
+        # What is happening is that we are going from a normal 600x400 image ( In the PIL format),
+        #after the transform, the image is resized and converted into a tensor for each i  mage ( resulting size=[3,320,320])
+
         input_img=A_img
-        A_gray=cv2.cvtColor(input_img,0)
-        A_gray=torch.unsqueeze(A_gray,0)
-        #r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
+        #A_gray=cv2.cvtColor(input_img,0)
+        #A_gray=torch.unsqueeze(A_gray,0)
+        r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
         A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
-        #A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with a
+        # Before: 320x320
+        A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with the entire image sqeezed into the 0th dimension/axis
+        # After 1x320x320
+
+
 
 
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
