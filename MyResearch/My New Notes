@@ -1,4 +1,5 @@
-I'm trying without handling the image path! Looks like this will need special attention when saving the images( This will come much later)
+THOROUGHLY UNDERSTAND THE SWITCHING OF LABELS IN backward_G
+
 SPICE EVERYTHING UP, TOO SIMILIAR!!!
 Blend it with Mask Shadow GAN
  Find other papers as well
@@ -10,7 +11,7 @@ This is just temporary, be ruthless thereafter
 
  Check if the config thing in EGAN is really necessary or not.
 
- # There is a lot of varitation that can come out of the VGG functions
+ # There is a lot of variation that can come out of the VGG functions
  Really make this my own! Experiment and only if really broken, revert to their altered form
 
  Once everything seems to be working, see if I can form the generator programmatically! #--> I bookmarked the solution
@@ -69,3 +70,17 @@ Check if data augmentation is really necessary when we have an abundance of unpa
 Do something truly different!
 Look into optimizing choice of batch size ( this seems very influential)... smaller batches= more significant changes per an update ( this is
 more noisy, though, the noise can help with the model's generalization capabilities)
+
+Check why is a 13x13 grid produced by the discriminator for each image in the batch
+Make sure the configuration of the PatchGAN is perfect! ( Structurally)
+Check what exactly is going on in backward_G
+Try increasing the number of patches that we extract
+Look into whether the order of training the generator and the discriminator is correct or not
+What is ragan? It is used by the global disc when backpropping but not used by the local discriminator
+Look into better ways of handling the backward functions (particularly the loss function stuff)
+ Experiment what happens if I also adjust the disc loss where I do not subtract ( generator held up quite well)
+ Why is preprocessing needed for the VGG network to convert from [RGB-->BGR] and [-1,1]-->[0,255]??? Could be with the way the vgg model was trained? There could be a discrepancy
+
+ Check if vgg_mean is actually useful or not? Seems to have potential?
+ Look into how vgg and vgg_loss are different... self.vgg_loss.compute_vgg_loss(self.vgg)... vgg_loss is a class and useful and uses the accepts self.vgg as input ... vgg is only the network, nothing else!
+ Why was relu5_1 used for the VGG network?

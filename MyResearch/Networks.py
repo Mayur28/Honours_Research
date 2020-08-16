@@ -176,8 +176,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
         self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
         self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
-        print("Size of the single patch")
-        print(self.fake_patch.size())
+        #print(self.fake_patch.size()) [16,3,32,32]
 
         self.fake_patch_list=[]
         self.real_patch_list=[]
@@ -200,11 +199,14 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # First let the discriminator make a prediction on the fake samples
         #This is the part recommended by Radford where we test real and fake samples in stages
         pred_fake=self.G_Disc.forward(self.fake_B)
-        print("Disc output for fake input")
-        print(pred_fake)
+        # To make a prediction, the discriminator outputs a 13x13 grid for each image in the batch... Check Why 13?
+        # torch.mean() is a scalar... what is going on?
         pred_real=self.G_Disc.forward(self.real_B)
+
+        # We are switching the labels when calculating the adversarial loss, I dont understand the subtraction of the opposite mean
         #CONFIRM THE SWITCHING STORY!!! What the hell is going on here? Why are the TERMS switched??? JUST THE ENTIRE FORM OF THE BELOW EXPRESSION LOOKS EXTREMELY FISHY!!! Note that we are taking the average ( dividing by 2 for some reason... Dont reason think this is necessary?!) Link this function to the __call__ function of GAN Loss
-        self.Gen_adv_loss= (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
+        # INNOVATE HERE!
+        self.Gen_adv_loss= (self.model_loss(pred_real, False) + self.model_loss(pred_fake, True)) / 2
 
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
 
@@ -213,13 +215,12 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         pred_fake_patch=self.L_Disc.forward(self.fake_patch)
         # We are definitely switching the label here because the patches are fake but we're setting the 'target_is_real' variable to True. Look into this in accordance with MLM plus others
 
-        accum_gen_loss+=self.model_loss(pred_fake_patch,True)
+        accum_gen_loss+=self.model_loss(pred_fake_patch,True)# Here, we are definitely swapping the label
 
         #Perform the predictions on the list of patches
         for i in range(self.opt.patchD_3):
             pred_fake_patch_list=self.L_Disc.forward(self.fake_patch_list[i])# Just check what is the shape of pred_fake_patch_list? Is it a single image or a batch?
 
-            #Again this label seems to be switched
             accum_gen_loss+=self.model_loss(pred_fake_patch_list,True)
         #Check if the below statement is really necessary( the dividing part)
         self.Gen_adv_loss+= accum_gen_loss/float(self.opt.patchD_3+1)
@@ -237,7 +238,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3+1)
 
-        self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss
+        self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss # The loss stuff is extremely simple to understand!
         self.Gen_loss.backward()# Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
 
 
@@ -248,22 +249,19 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
 
         # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
-        if(use_ragan):
+        if(use_ragan):# I can modify this (analogous to the generator) and abstaining from the subrtaction terms
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
             self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
         else:
-            loss_D_real=self.model_loss(pred_real,True)
+            loss_D_real=self.model_loss(pred_real,True)# We dont swap for patches
             loss_D_fake=self.model_loss(pred_fake,False)
             Disc_loss=(loss_D_real+loss_D_fake)*0.5
         return Disc_loss
 
-
-
-
-
     def backward_G_Disc(self):
         # Try to thing carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples... Why are we doing this again? We just did something similiar when updating the generator
-        self.G_Disc_loss=self.backward_D_basic(self.G_Disc,self.real_B,self.fake_B,True) # Why do need need this seperate function? Unless it will be in common OR handled difference in the local discriminator case? INVESTIGATE
+        # It's probably just for the sequencing>>> We have to update the generator before turning our attention to the discriminator
+        self.G_Disc_loss=self.backward_D_basic(self.G_Disc,self.real_B,self.fake_B,True)
         self.G_Disc_loss.backward()# Thing about where exactly are we backpropagating this!?
 
     def backward_L_Disc(self):
@@ -365,17 +363,7 @@ class GANLoss(nn.Module):
         return target_tensor
 
     def __call__(self,input,target_is_real):
-        #print("Target Is Real")
-        #print(target_is_real)
         target_tensor=self.get_target_tensor(input,target_is_real)
-        #print("Check for input")
-        #print(input.is_cuda)
-        #print("Check for target tensor")
-        #print(target_tensor.is_cuda)
-        #print("Input Type")
-        #print(type(input))
-        #print("Target tensor type")
-        #print(type(target_tensor))
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
@@ -626,7 +614,7 @@ class Unet_generator1(nn.Module):
         return output, latent # Want to see what is this latent!
 
 
-class PatchGAN(nn.Module):
+class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is absolutely "textbook stuff"
     def __init__(self,opt,patch):
         super(PatchGAN, self).__init__()
 
@@ -677,8 +665,8 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
     def compute_vgg_loss(self,vgg_network,image,target):
         #print("I am in Compute VGG_loss")
         #print(image.shape)
-        image_vgg=vgg_preprocess(image,self.opt)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
-        target_vgg=vgg_preprocess(target,self.opt)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
+        image_vgg=vgg_preprocess(image,)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
+        target_vgg=vgg_preprocess(target)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
         # Check if there is a work around this!
 
         img_feature_map=vgg_network(image_vgg,self.opt)# Get the feature map of the input image
@@ -739,7 +727,8 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
 
 
 #There is a lot of room for variation here
-def vgg_preprocess(batch, opt):
+#Why is preprocessing needed for the VGG network to convert from [RGB-->BGR] and [-1,1]-->[0,255]??? Could be with the way the vgg model was trained? There could be a discrepancy
+def vgg_preprocess(batch):
     tensortype = type(batch.data)
     (r, g, b) = torch.chunk(batch, 3, dim = 1)
     batch = torch.cat((b, g, r), dim = 1) # convert RGB to BGR
