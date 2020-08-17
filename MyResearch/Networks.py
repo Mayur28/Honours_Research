@@ -16,50 +16,6 @@ from collections import OrderedDict
 
 # Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
 
-def pad_tensor(input):# Dimension should be [16,3,320,320]
-    height_org, width_org = input.shape[2], input.shape[3]
-    divide = 16
-
-    if width_org % divide != 0 or height_org % divide != 0:
-        print("HELLO")
-
-        width_res = width_org % divide
-        height_res = height_org % divide
-        if width_res != 0:
-            width_div = divide - width_res
-            pad_left = int(width_div / 2)
-            pad_right = int(width_div - pad_left)
-        else:
-            pad_left = 0
-            pad_right = 0
-
-        if height_res != 0:
-            height_div = divide - height_res
-            pad_top = int(height_div  / 2)
-            pad_bottom = int(height_div  - pad_top)
-        else:
-            pad_top = 0
-            pad_bottom = 0
-
-        padding = nn.ReflectionPad2d((pad_left, pad_right, pad_top, pad_bottom))
-        input = padding(input)
-    else:
-        pad_left = 0
-        pad_right = 0
-        pad_top = 0
-        pad_bottom = 0
-
-    height, width = input.data.shape[2], input.data.shape[3]
-    assert width % divide == 0, 'width cant divided by stride'
-    assert height % divide == 0, 'height cant divided by stride'
-
-    return input, pad_left, pad_right, pad_top, pad_bottom
-
-def pad_tensor_back(input, pad_left, pad_right, pad_top, pad_bottom): # We are just removing the padding
-    height, width = input.shape[2], input.shape[3]
-    return input[:,:, pad_top: height - pad_bottom, pad_left: width - pad_right]# This makes sense
-
-
 
 def weights_init(model):
     class_name=model.__class__.__name__
@@ -73,7 +29,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
     def __init__(self,opt):
 
         self.opt=opt
-
         #I'm assuming that a CUDA GPU is used.
         self.input_A=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)#We are basically creating a tensor to store 16 low-light colour images with size crop_size x crop_size
         self.input_B=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)# Same as above but now for storing the normal-light images (NOT THE RESULT!)
@@ -94,7 +49,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         self.Gen=make_G(opt)
 
-        if(self.opt.isTrain):
+        if(self.opt.isTrain): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
             self.G_Disc=make_Disc(opt,False) # This declaration should have a patch option because they have different number of layers each.
             self.L_Disc=make_Disc(opt,True) # Check if this switch is working correctly or not!
 
@@ -104,7 +59,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.G_Disc_optimizer=torch.optim.Adam(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.L_Disc_optimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            if self.opt.isTrain==False:
+            if self.opt.isTrain==False: # We shouldn't be coming here in the first place! We should directly be able to load the model...
                 self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
 
 
@@ -112,16 +67,12 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
     #This was directly copied over because the the stuff towards the bottom seemed necessary
-        input_A=input['A']
-        input_B=input['B']
-        input_A_gray=input['A_gray']
-        input_img=input['input_img']
+        self.input_A=input['A']
+        self.input_B=input['B']
+        self.input_A_gray=input['A_gray']
+        self.input_img=input['input_img']
 
-        # This is extremely important and confusing!
-        self.input_A.resize_(input_A.size()).copy_(input_A)
-        self.input_B.resize_(input_B.size()).copy_(input_B)
-        self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
-        self.input_img.resize_(input_img.size()).copy_(input_img)
+    
 
 
         # Whatever comes below needs to be taken care of with extreme caution... Think everything through
@@ -133,14 +84,13 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         self.G_optimizer.step()
 
-        # Now onto updating the discriminator!
         self.G_Disc_optimizer.zero_grad()
         self.backward_G_Disc()
+        self.G_Disc_optimizer.step()
+
 
         self.L_Disc_optimizer.zero_grad()
         self.backward_L_Disc()
-
-        self.G_Disc_optimizer.step()
         self.L_Disc_optimizer.step()
 
 
@@ -153,10 +103,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.real_A_gray=Variable(self.input_A_gray) # This is the attention map
         self.real_img=Variable(self.input_img) #In our configuation, input_img=input_A
 
-        #print("Shape of real_A: %s " % self.real_A.size())
-        #print("Shape of real_B: %s " % self.real_B.size())
-        #print("Shape of real_A_gray: %s " % self.real_A_gray.size())
-        #print("Shape of real_img: %s " % self.real_img.size())
 
         #Make a prediction!
         # What is the latent used for?
@@ -528,8 +474,6 @@ class Unet_generator1(nn.Module):
 			# Otherwise, we pad the dimensions that are skew by the amount such that the dim. of the new padded version is divisible by 16.
 			#The pad_tensor function performs the padding (if necessary) and returns how much padding was applied to each side which makes it easier when removing the padding later.
 
-        input, pad_left,pad_right,pad_top,pad_bottom=pad_tensor(input)
-        gray, pad_left, pad_right,pad_top, pad_bottom=pad_tensor(gray)
 
         # First downsample the attention map for all stages
         gray_2=self.att_downsize(gray)
@@ -603,10 +547,6 @@ class Unet_generator1(nn.Module):
         #    latent = self.tanh(latent)# Oddly does not apply to us
         output = latent + input*float(self.opt.skip)# This is a breakthrough! The latent result is added to the low-light image to form the output.
 
-
-        output = pad_tensor_back(output, pad_left, pad_right, pad_top, pad_bottom)
-        latent = pad_tensor_back(latent, pad_left, pad_right, pad_top, pad_bottom)
-        gray = pad_tensor_back(gray, pad_left, pad_right, pad_top, pad_bottom)
         if flag == 1: # If fineSize>2200 which resulting in having to perform AvgPooling
             output = F.upsample(output, scale_factor=2, mode='bilinear')
             gray = F.upsample(gray, scale_factor=2, mode='bilinear')
