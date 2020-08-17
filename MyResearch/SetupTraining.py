@@ -55,7 +55,7 @@ class SetupTraining():
         # noise will be set to 0 by default
         self.parser.add_argument('--patch_vgg', default=True, action='store_true', help='use vgg loss between each patch')
         self.parser.add_argument('--hybrid_loss', default=True, action='store_true', help='use lsgan and ragan separately')
-
+        self.parser.add_argument('--self_attention', default= True,  action='store_true', help='adding attention on the input of generator')
         # We have this! What does it do? Multiplies the latent result to the attention map in the generator... But why?
         self.parser.add_argument('--times_residual', default=True, action='store_true', help='output = input + residual*attention')
         #Now, the proper training options

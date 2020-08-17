@@ -62,3 +62,8 @@ Look into better ways of handling the backward functions (particularly the loss 
 
 Other notes
 THe PatchGAN structure is perfect!
+
+From Radford
+Replace Maxpooling with spatial convolutions to downsample which allows the network to learn its own spatial downsampling
+apparently Above is used in the discriminator as well
+Use batch normalization wherever possible, accept for the output layer of the generator and the input layer of the discriminator
