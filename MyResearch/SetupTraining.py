@@ -47,7 +47,8 @@ class SetupTraining():
         # use_avgpool specifies if we use average or max pooling... Experiment with this!
         self.parser.add_argument('--n_layers_D', type=int, default=5, help='number of layers in global discriminator')
         self.parser.add_argument('--n_layers_patchD', type=int, default=4, help='number of layers in local discriminator')
-        self.parser.add_argument('--patchD_3', type=int, default=5, help='Number of patches to crop for the local discriminator')
+        self.parser.add_argument('--patchD_3', type=int, default=8, help='Number of patches to crop for the local discriminator')
+        # To be in accordance with EGAN, change above to 6
 
         # Maxpooling is used instead of avg_pooling to downsample in the generator
         self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptual loss')

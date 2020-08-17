@@ -67,10 +67,10 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
     #This was directly copied over because the the stuff towards the bottom seemed necessary
-        self.input_A=input['A']
-        self.input_B=input['B']
-        self.input_A_gray=input['A_gray']
-        self.input_img=input['input_img']
+        input_A=input['A']
+        input_B=input['B']
+        input_A_gray=input['A_gray']
+        input_img=input['input_img']
 
         # This is extremely important and confusing!
         self.input_A.resize_(input_A.size()).copy_(input_A)
@@ -122,18 +122,19 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # Check if there is really a need for these seperate patches
 
         # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
-        self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
-        self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
-        self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
+        #self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
+        #self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
+        #self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
         #print(self.fake_patch.size()) [16,3,32,32]
 
         self.fake_patch_list=[]
         self.real_patch_list=[]
         self.input_patch_list=[]
 
-        # This will basically create 5 batches (of 16 patches each)
+        # This will basically create 8 batches (of 16 patches each)
 
         for i in range(self.opt.patchD_3):
+
             w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
             h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
 
@@ -155,8 +156,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # We are switching the labels when calculating the adversarial loss, I dont understand the subtraction of the opposite mean
         #CONFIRM THE SWITCHING STORY!!! What the hell is going on here? Why are the TERMS switched??? JUST THE ENTIRE FORM OF THE BELOW EXPRESSION LOOKS EXTREMELY FISHY!!! Note that we are taking the average ( dividing by 2 for some reason... Dont reason think this is necessary?!) Link this function to the __call__ function of GAN Loss
         # INNOVATE HERE!
-        self.Gen_adv_loss= (self.model_loss(pred_real, False) + self.model_loss(pred_fake, True)) / 2
-
+self.Gen_adv_loss= (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
 
         accum_gen_loss=0
@@ -607,7 +607,7 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
     def compute_vgg_loss(self,vgg_network,image,target):
         #print("I am in Compute VGG_loss")
         #print(image.shape)
-        image_vgg=vgg_preprocess(image,)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
+        image_vgg=vgg_preprocess(image)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
         target_vgg=vgg_preprocess(target)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
         # Check if there is a work around this!
 
