@@ -47,8 +47,8 @@ class SetupTraining():
         # use_avgpool specifies if we use average or max pooling... Experiment with this!
         self.parser.add_argument('--n_layers_D', type=int, default=5, help='number of layers in global discriminator')
         self.parser.add_argument('--n_layers_patchD', type=int, default=4, help='number of layers in local discriminator')
-        self.parser.add_argument('--patchD_3', type=int, default=8, help='Number of patches to crop for the local discriminator')
-        # To be in accordance with EGAN, change above to 6
+        self.parser.add_argument('--patchD_3', type=int, default=5, help='Number of patches to crop for the local discriminator')
+        # To be in accordance with EGAN, change above to 6 ( When not using the individual patch)
 
         # Maxpooling is used instead of avg_pooling to downsample in the generator
         self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptual loss')
@@ -66,7 +66,7 @@ class SetupTraining():
         self.parser.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
         self.parser.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
         self.parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
-        self.parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
+        self.parser.add_argument('--lr', type=float, default=0.0001, help='initial learning rate for adam')
         # EGAN used 0.0001 but Radford recommended 0.0002
         self.parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
         self.isTrain = True

@@ -1,3 +1,9 @@
+MAJOR OVERHAUL NEEDED!!!!
+KEEPS BREAKING!!! ( SOMETIMES AT 10, SOMETIMES AT 30)... Gives weird effects
+
+
+Just to make sure, I've added back the individual patch
+
 
 SPICE EVERYTHING UP, TOO SIMILIAR!!!
 Blend it with Mask Shadow GAN
@@ -12,6 +18,7 @@ Experiment what happens if I also adjust the disc loss where I do not subtract (
 
 
 Concrete To Do List
+Experiment the effect when instance normalization is used
 Consider using batch_size=8... Dont be premature in the verdict... Read hardt carefully before making this a pacifier for everything...
  Really make this my own! Experiment and only if really broken, revert to their altered form
  Once everything seems to be working, see if I can form the generator programmatically! #--> I bookmarked the solution ( OR Just create mini modules/ units!)
@@ -39,6 +46,9 @@ Check if eventually decaying the learning rate is really useful or not.
 
 
 Concrete Investigative list
+Investigate how was the low-light images of egan formed? They seem very artificial... An example being 23_2... The sky cant be that dim... In the paper, that mention the 4 sources (2 normal) and 2 HDR sources... INVESTIGATE THIS THOROUGHLY... could help with quality of performance.
+When writing the report, explain the effect of varying every single parameter individually!
+Experiment the effect when instance normalization is used
 Look into whether the order of training the generator and the discriminator is correct or not
  Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
  Go beyond what I wanted and state how exactly do I want to improve this in the long run
@@ -67,7 +77,7 @@ Look into better ways of handling the backward functions (particularly the loss 
 Other notes
 THe PatchGAN structure is perfect!
 Im not subtracting in both the gen and disc losses... Paired with this, Im using 8 batches of patches ( 2 more than EGAN)--> It definitely starts slower and get decent results only after a long while but Radford quotes Hardt et al. that proves the relationship between rate of convergence and generalization quality
-Note! Increasing from EGAN 6 patches to 8 patches, improvement seems likely but increases the runtime by 4-5 seconds... Dont only focus on runtime and neglect quality of results.
+Note! Increasing from EGAN 6 patches to 8 patches, improvement seems likely but increases the runtime by 4-5 seconds... Dont only focus on runtime and neglect quality of results.... I like the results when 8 patches are used despite the longer runtime... Mention this caveat in the report
 
 From Radford
 Replace Maxpooling with spatial convolutions to downsample which allows the network to learn its own spatial downsampling
@@ -79,3 +89,4 @@ lr=0.0002... 0.5 beta1
 
 Recent analysis has shown that there is a direct link between how fast models learn and their generalization performance (Hardt et al., 2015).
 For above, dont get premature with initial results, wait it out.
+Surprisingly, Mask shadow GAN obeys alot from Radford but uses Instance norm in both networks
