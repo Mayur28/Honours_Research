@@ -57,3 +57,8 @@ Look into better ways of handling the backward functions (particularly the loss 
  Look into how vgg and vgg_loss are different... self.vgg_loss.compute_vgg_loss(self.vgg)... vgg_loss is a class and useful and uses the accepts self.vgg as input ... vgg is only the network, nothing else!
  Why was relu5_1 used for the VGG network?
  Investigate thoroughly how is the forward function of the VGG network being called implicitly. Might be that when called, it calls the other function that is not the __init__ function
+
+
+
+Other notes
+THe PatchGAN structure is perfect!

@@ -16,12 +16,12 @@ from collections import OrderedDict
 
 # Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
 
-def pad_tensor(input):# Just check what is the dimensions of this input
-    # Spice this up, can surely be done better?
+def pad_tensor(input):# Dimension should be [16,3,320,320]
     height_org, width_org = input.shape[2], input.shape[3]
     divide = 16
 
     if width_org % divide != 0 or height_org % divide != 0:
+        print("HELLO")
 
         width_res = width_org % divide
         height_res = height_org % divide
@@ -244,6 +244,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
     def backward_D_basic(self,network,real,fake,use_ragan):
+        # THe discriminator is trained solely on it's own perfoemance.
     # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
         pred_real=network.forward(real)
         pred_fake=network.forward(fake.detach())#< This is correct!... What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
