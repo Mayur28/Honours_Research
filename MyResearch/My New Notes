@@ -5,12 +5,16 @@ Blend it with Mask Shadow GAN
  Do with my own understanding!!!
 This is just temporary, be ruthless thereafter
 
-Concrete To Do List
-THOROUGHLY UNDERSTAND THE SWITCHING OF LABELS IN backward_G
+
+In the pipe line already
+Investigate the effect of increasing the number of patches
 Experiment what happens if I also adjust the disc loss where I do not subtract ( generator held up quite well)--> Check on this again! Something caused the network to derail ( either this or the or that I updated the networks)
-# There is a lot of variation that can come out of the VGG functions
+
+
+Concrete To Do List
+Consider using batch_size=8... Dont be premature in the verdict... Read hardt carefully before making this a pacifier for everything...
  Really make this my own! Experiment and only if really broken, revert to their altered form
- Once everything seems to be working, see if I can form the generator programmatically! #--> I bookmarked the solution ( OR Just create mini modules!)
+ Once everything seems to be working, see if I can form the generator programmatically! #--> I bookmarked the solution ( OR Just create mini modules/ units!)
  I particularly need to look into the get_target tensor function. There can be significant improvement
  #Start with the above point tomorrow as it is pertinent!!!
  Try to find a way to plot the loss after every xxx epochs ( Try to link it using tensorboard and try a dummy example on Colab before commiting)
@@ -62,8 +66,16 @@ Look into better ways of handling the backward functions (particularly the loss 
 
 Other notes
 THe PatchGAN structure is perfect!
+Im not subtracting in both the gen and disc losses... Paired with this, Im using 8 batches of patches ( 2 more than EGAN)--> It definitely starts slower and get decent results only after a long while but Radford quotes Hardt et al. that proves the relationship between rate of convergence and generalization quality
+Note! Increasing from EGAN 6 patches to 8 patches, improvement seems likely but increases the runtime by 4-5 seconds... Dont only focus on runtime and neglect quality of results.
 
 From Radford
 Replace Maxpooling with spatial convolutions to downsample which allows the network to learn its own spatial downsampling
 apparently Above is used in the discriminator as well
 Use batch normalization wherever possible, accept for the output layer of the generator and the input layer of the discriminator
+Generator uses Relu only ( except output layer which uses tanh). Discriminator uses leaky RELu
+For weight initialization, zero mean and std dev=0.02. Leak=0.2
+lr=0.0002... 0.5 beta1
+
+Recent analysis has shown that there is a direct link between how fast models learn and their generalization performance (Hardt et al., 2015).
+For above, dont get premature with initial results, wait it out.
