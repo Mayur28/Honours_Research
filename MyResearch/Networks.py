@@ -246,12 +246,12 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
     def backward_D_basic(self,network,real,fake,use_ragan):
     # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
         pred_real=network.forward(real)
-        pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+        pred_fake=network.forward(fake.detach())#< This is correct!... What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
 
-        # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
-        if(use_ragan):# I can modify this (analogous to the generator) and abstaining from the subrtaction terms
+        # Like in the generator case, this calculation is swapped for some reason.
+        if(use_ragan):# I can modify this (analogous to the generator) and abstaining from the subtraction terms
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
-            self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
+            self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2# This is like the adversarial loss that should match the generator's loss.
         else:
             loss_D_real=self.model_loss(pred_real,True)# We dont swap for patches
             loss_D_fake=self.model_loss(pred_fake,False)
@@ -259,7 +259,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         return Disc_loss
 
     def backward_G_Disc(self):
-        # Try to thing carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples... Why are we doing this again? We just did something similiar when updating the generator
+        # Try to think carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples... Why are we doing this again? We just did something similiar when updating the generator
         # It's probably just for the sequencing>>> We have to update the generator before turning our attention to the discriminator
         self.G_Disc_loss=self.backward_D_basic(self.G_Disc,self.real_B,self.fake_B,True)
         self.G_Disc_loss.backward()# Thing about where exactly are we backpropagating this!?
@@ -270,7 +270,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         for i in range(self.opt.patchD_3):
             L_Disc_loss+=self.backward_D_basic(self.L_Disc, self.real_patch_list[i], self.fake_patch_list[i], False)
         # They is the normal calculation. The calc. for the whole image is handled seperately... we only handling patches here, thats why we can average everything.
-        self.L_Disc_loss=L_Disc_loss/float(self.opt.patchD_3+1)
+        self.L_Disc_loss=L_Disc_loss/float(self.opt.patchD_3+1) # The added 1 is to account for the seperate patch that we are using
         self.L_Disc_loss.backward()
 
 
@@ -281,10 +281,9 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         vgg=self.total_vgg_loss.item()/1.0
         return OrderedDict([('Gen',Gen),('G_Disc',Global_disc),('L_Disc',Local_disc),('vgg',vgg)])
 
-    def for_displaying_images(self):
+    def for_displaying_images(self):# Since self.realA_ was declared as a Variable, .data extracts the tensor of the variable.
         real_A=TensorToImage(self.real_A.data)# The low-light image (which is also our input image)
         fake_B=TensorToImage(self.fake_B.data)# Our produced result
-        real_B=TensorToImage(self.real_B.data)
 
         # Experiment alot to see what is this latent stuff and what is it used for
         # What does the .data do?
@@ -294,10 +293,9 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         fake_patch = TensorToImage(self.fake_patch.data)
         real_patch = TensorToImage(self.real_patch.data)
 
-        input_patch = TensorToImage(self.input_patch.data)
 
         self_attention= AttentionToImage(self.real_A_gray.data)
-        return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_B', real_B), ('real_patch', real_patch),('fake_patch', fake_patch), ('input_patch', input_patch), ('self_attention', self_attention)])
+        return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
     def save_network(self,network,label,epoch):
         save_name='%s_net_%s.pth' %(epoch,label)
@@ -682,7 +680,7 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
         super(Vgg,self).__init__()
 
 
-        #This needs to be changed!
+        #This needs to be changed! Atleast the names... We were told ( check where) that the first 5 layers of the VGG networks are used.
         self.conv1_1=nn.Conv2d(3,64,kernel_size=3,stride=1,padding=1)
         self.conv1_2=nn.Conv2d(64,64,kernel_size=3,stride=1,padding=1)
 

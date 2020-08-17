@@ -48,7 +48,6 @@ for epoch in range(1,opt.niter+opt.niter_decay+1):
             print_errors(epoch,epoch_iter,the_model.get_model_errors(epoch),exec_time)
 
     if(epoch% opt.save_epoch_freq==0):
-        #model.save('latest')
         the_model.save_model(epoch)
 
     print('End of epoch %d / %d \t Time Taken: %d sec' %

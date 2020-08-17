@@ -78,7 +78,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         B_img=self.transform(B_img)
 
         # What is happening is that we are going from a normal 600x400 image ( In the PIL format),
-        #after the transform, the image is resized and converted into a tensor for each i  mage ( resulting size=[3,320,320])
+        #after the transform, the image is resized and converted into a tensor for each image ( resulting size=[3,320,320])
 
         input_img=A_img
         #A_gray=cv2.cvtColor(input_img,0)
@@ -88,8 +88,6 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         # Before: 320x320
         A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with the entire image sqeezed into the 0th dimension/axis
         # After 1x320x320
-
-
 
 
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
@@ -102,8 +100,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 def TensorToImage(img_tensor,imtype=np.uint8):
     usable_images=img_tensor[0].cpu().float().numpy()
     usable_images=(np.transpose(usable_images, (1, 2, 0)) + 1) / 2.0 * 255.0
-    usable_images=np.maximum(usable_images,0)
-    usable_images=np.minimum(usable_images,255)
+    usable_images=np.clip(usable_images,0,255)
     return usable_images.astype(imtype)
 
 # Find out exactly what is going on here( detaching and manipulating???)
@@ -118,6 +115,5 @@ def AttentionToImage(img_tensor,imtype=np.uint8):
 def LatentToImage(img_tensor,imtype=np.uint8):
     usable_images = img_tensor[0].cpu().float().numpy()
     usable_images = (np.transpose(usable_images, (1, 2, 0))) * 255.0
-    usable_images = np.maximum(usable_images, 0)
-    usable_images = np.minimum(usable_images, 255)
+    usable_images = np.clip(usable_images,0, 255)
     return usable_images.astype(imtype)
