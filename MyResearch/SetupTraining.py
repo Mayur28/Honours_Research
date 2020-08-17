@@ -45,20 +45,15 @@ class SetupTraining():
         #no_vgg_instance=False
         # vgg_maxpooling=False
         # use_avgpool specifies if we use average or max pooling... Experiment with this!
-        self.parser.add_argument('--n_layers_D', type=int, default=5, help='only used if which_model_netD==n_layers')
-        self.parser.add_argument('--n_layers_patchD', type=int, default=4, help='only used if which_model_netD==n_layers')
+        self.parser.add_argument('--n_layers_D', type=int, default=5, help='number of layers in global discriminator')
+        self.parser.add_argument('--n_layers_patchD', type=int, default=4, help='number of layers in local discriminator')
+        self.parser.add_argument('--patchD_3', type=int, default=5, help='Number of patches to crop for the local discriminator')
+
         # Maxpooling is used instead of avg_pooling to downsample in the generator
-        self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptrual loss')
-        # They included an option that adds instance_norm before vgg to stabilize training
+        self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptual loss')
         # noise will be set to 0 by default
-        #input_linear is false
-        #patchD will be True by default
-        self.parser.add_argument('--patchD_3', type=int, default=5, help='choose the number of crop for patch discriminator')
-        # We dont use D_P_times2, what why was it considered in the first place?
-        self.parser.add_argument('--D_P_times2', action='store_true', help='loss_D_P *= 2')
         self.parser.add_argument('--patch_vgg', default=True, action='store_true', help='use vgg loss between each patch')
         self.parser.add_argument('--hybrid_loss', default=True, action='store_true', help='use lsgan and ragan separately')
-        self.parser.add_argument('--self_attention', default= True,  action='store_true', help='adding attention on the input of generator')
 
         # We have this! What does it do? Multiplies the latent result to the attention map in the generator... But why?
         self.parser.add_argument('--times_residual', default=True, action='store_true', help='output = input + residual*attention')
@@ -73,8 +68,6 @@ class SetupTraining():
         self.parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
         # EGAN used 0.0001 but Radford recommended 0.0002
         self.parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
-        # Configure the pool size, what exactly does it do?
-        self.parser.add_argument('--pool_size', type=int, default=50, help='the size of image buffer that stores previously generated images')
         self.isTrain = True
 
 

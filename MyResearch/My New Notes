@@ -6,6 +6,7 @@ Blend it with Mask Shadow GAN
 This is just temporary, be ruthless thereafter
 
 Concrete To Do List
+Fix ALL THINGS PATCHES!!!
 THOROUGHLY UNDERSTAND THE SWITCHING OF LABELS IN backward_G
 Experiment what happens if I also adjust the disc loss where I do not subtract ( generator held up quite well)
 # There is a lot of variation that can come out of the VGG functions

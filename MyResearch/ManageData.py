@@ -89,12 +89,6 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with the entire image sqeezed into the 0th dimension/axis
         # After 1x320x320
 
-        # This is extremely important and confusing!
-        A_img.resize_(A_img.size()).copy_(A_img)
-        B_img.resize_(B_img.size()).copy_(B_img)
-        A_gray.resize_(A_gray.size()).copy_(A_gray)
-        input_img.resize_(input_img.size()).copy_(input_img)
-
 
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
 

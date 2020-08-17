@@ -72,11 +72,14 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.input_A_gray=input['A_gray']
         self.input_img=input['input_img']
 
-    
+        # This is extremely important and confusing!
+        self.input_A.resize_(input_A.size()).copy_(input_A)
+        self.input_B.resize_(input_B.size()).copy_(input_B)
+        self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
+        self.input_img.resize_(input_img.size()).copy_(input_img)
 
 
         # Whatever comes below needs to be taken care of with extreme caution... Think everything through
-
         # This is for optimizing the generator.
         self.forward()# This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
         self.G_optimizer.zero_grad()# Check the positioning of this statement (can it be first?)
