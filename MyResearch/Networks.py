@@ -121,9 +121,9 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # Check if there is really a need for these seperate patches
 
         # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
-        #self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
-        #self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
-        #self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
+        self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
+        self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
+        self.input_patch=self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# patch from the training set's low-light images... I dont really see why do we need this though??
         #print(self.fake_patch.size()) [16,3,32,32]
 
         self.fake_patch_list=[]
@@ -160,10 +160,10 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         accum_gen_loss=0
         #Still dont see the point of this...
-        #pred_fake_patch=self.L_Disc.forward(self.fake_patch)
+        pred_fake_patch=self.L_Disc.forward(self.fake_patch)
         # We are definitely switching the label here because the patches are fake but we're setting the 'target_is_real' variable to True. Look into this in accordance with MLM plus others
 
-        #accum_gen_loss+=self.model_loss(pred_fake_patch,True)# Here, we are definitely swapping the label
+        accum_gen_loss+=self.model_loss(pred_fake_patch,True)# Here, we are definitely swapping the label
 
         #Perform the predictions on the list of patches
         for i in range(self.opt.patchD_3):
@@ -171,20 +171,20 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
             accum_gen_loss+=self.model_loss(pred_fake_patch_list,True)
         #Check if the below statement is really necessary( the dividing part)
-        self.Gen_adv_loss+= accum_gen_loss/float(self.opt.patchD_3)
+        self.Gen_adv_loss+= accum_gen_loss/float(self.opt.patchD_3+1)
         # This now contains the loss from propagting the entire image and now, we're adding the average loss from all the fake patchs
 
         # Check if we use the other patch lists
         self.total_vgg_loss=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_B,self.real_A)*1.0 # This the vgg loss for the entire images!
 
-        #patch_loss_vgg=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_patch,self.input_patch)*1.0
+        patch_loss_vgg=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_patch,self.input_patch)*1.0
         # This is the vgg loss for the individual patch
         # Check what its the diff between self.input_patch and self.real_patch? I think input_patch is the low-light patches and real_patches are the normal_light images,thats why I'd be wrong.
-        patch_loss_vgg=0
+        #patch_loss_vgg=0
         for i in range(self.opt.patchD_3):
             patch_loss_vgg+=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_patch_list[i],self.input_patch_list[i])*1.0
 
-        self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3)
+        self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3+1)
 
         self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss # The loss stuff is extremely simple to understand!
         self.Gen_loss.backward()# Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
@@ -214,12 +214,12 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.G_Disc_loss.backward()# Thing about where exactly are we backpropagating this!?
 
     def backward_L_Disc(self):
-        L_Disc_loss=0
+        L_Disc_loss=self.backward_D_basic(self.L_Disc,self.real_patch,self.fake_patch,False)
 
         for i in range(self.opt.patchD_3):
             L_Disc_loss+=self.backward_D_basic(self.L_Disc, self.real_patch_list[i], self.fake_patch_list[i], False)
         # They is the normal calculation. The calc. for the whole image is handled seperately... we only handling patches here, thats why we can average everything.
-        self.L_Disc_loss=L_Disc_loss/float(self.opt.patchD_3) 
+        self.L_Disc_loss=L_Disc_loss/float(self.opt.patchD_3+1)
         self.L_Disc_loss.backward()
 
 
@@ -283,6 +283,15 @@ class GANLoss(nn.Module):
         self.fake_label_var=None
         self.Tensor=torch.cuda.FloatTensor
         self.loss=nn.MSELoss()
+
+    # #This function is absolute rubbish! Can be significantly improved!
+    # def get_target_tensor(self,input,target_is_real):#This function basically creates a target label tensor which is used to compute the MSE in __call__.
+    #     target_tensor=None
+    #     if target_is_real:
+    #         target_tensor=Variable(self.Tensor(input.size()).fill_(self.real_label),requires_grad=False)
+    #     else:
+    #         target_tensor=Variable(self.Tensor(input.size()).fill_(self.fake_label),requires_grad=False)
+    #     return target_tensor
 
 
     #This function is absolute rubbish! Can be significantly improved!
