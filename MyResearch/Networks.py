@@ -80,12 +80,15 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
         # Whatever comes below needs to be taken care of with extreme caution... Think everything through
+
         # This is for optimizing the generator.
         self.forward()# This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
         self.G_optimizer.zero_grad()# Check the positioning of this statement (can it be first?)
         self.backward_G()
 
-         # Now onto updating the discriminator!
+        self.G_optimizer.step()
+
+        # Now onto updating the discriminator!
         self.G_Disc_optimizer.zero_grad()
         self.backward_G_Disc()
 
@@ -192,17 +195,16 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
     def backward_D_basic(self,network,real,fake,use_ragan):
-        # THe discriminator is trained solely on it's own perfoemance.
     # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
         pred_real=network.forward(real)
-        pred_fake=network.forward(fake.detach())#< This is correct!... What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+        pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
 
-        # Like in the generator case, this calculation is swapped for some reason.
-        if(use_ragan):# I can modify this (analogous to the generator) and abstaining from the subtraction terms
+        # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
+        if(use_ragan):
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
-            self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2# This is like the adversarial loss that should match the generator's loss.
+            self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
         else:
-            loss_D_real=self.model_loss(pred_real,True)# We dont swap for patches
+            loss_D_real=self.model_loss(pred_real,True)
             loss_D_fake=self.model_loss(pred_fake,False)
             Disc_loss=(loss_D_real+loss_D_fake)*0.5
         return Disc_loss
@@ -674,7 +676,6 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
 
 
 #There is a lot of room for variation here
-#Why is preprocessing needed for the VGG network to convert from [RGB-->BGR] and [-1,1]-->[0,255]??? Could be with the way the vgg model was trained? There could be a discrepancy
 def vgg_preprocess(batch):
     tensortype = type(batch.data)
     (r, g, b) = torch.chunk(batch, 3, dim = 1)
