@@ -29,6 +29,7 @@ class SetupTraining():
         self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/MyResearch/', help='models are saved here')
         self.parser.add_argument('--norm_type', type=str, default='batch', help='instance normalization or batch normalization')
         # We are only cropping, experiment with the other options here!
+        # Check if this is really necessary?
         self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
 
 

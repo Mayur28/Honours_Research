@@ -117,12 +117,10 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         w=self.real_A.size(3)
         h=self.real_B.size(2)
         # Remove this individual patch!
-        #The cropping can be done more professionally!
         w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
         h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
 
         # Check if there is really a need for these seperate patches
-
         # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
         self.fake_patch=self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size] # Patch from our enhanced result
         self.real_patch=self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size]# Path from the training set's normal light images
@@ -335,7 +333,7 @@ class Unet_generator1(nn.Module):
 
         self.conv1_1=nn.Conv2d(4,32,3,padding=1)# 4 because of the the RGB image and the attention map...
         self.LRelu1_1=nn.LeakyReLU(0.2,inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
-        if(self.opt.norm_type=='Batch'):
+        if(self.opt.norm_type=='Batch'): # I have batch by they have it as use_norm which is the L1 loss weight
             self.norm1_1=nn.BatchNorm2d(32)
         else:
             self.norm1_1=nn.InstanceNorm2d(32)
@@ -472,12 +470,12 @@ class Unet_generator1(nn.Module):
         #self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
 
     def forward(self,input,gray): # We forward propagate a batch at a time!
-        flag=0
-        if input.size()[3] >2200:# This seems ridiculous! Test performance when this is removed
-            avg=nn.avgPool2d(2)
-            input=avg(input)
-            gray=avg(gray)
-            flag=1#--> Indicates that at the end, we need to upsample
+        # flag=0
+        # if input.size()[3] >2200:# This seems ridiculous! Test performance when this is removed
+        #     avg=nn.avgPool2d(2)
+        #     input=avg(input)
+        #     gray=avg(gray)
+        #     flag=1#--> Indicates that at the end, we need to upsample
             # Before Performing a forward pass on the tensor, we first pad the tensor containing the real (low-light) images
 			#If the dimensions of the images are perfectly divisible by 16, we dont pad.
 			# Otherwise, we pad the dimensions that are skew by the amount such that the dim. of the new padded version is divisible by 16.
@@ -556,9 +554,9 @@ class Unet_generator1(nn.Module):
         #    latent = self.tanh(latent)# Oddly does not apply to us
         output = latent + input*float(self.opt.skip)# This is a breakthrough! The latent result is added to the low-light image to form the output.
 
-        if flag == 1: # If fineSize>2200 which resulting in having to perform AvgPooling
-            output = F.upsample(output, scale_factor=2, mode='bilinear')
-            gray = F.upsample(gray, scale_factor=2, mode='bilinear')
+        # if flag == 1: # If fineSize>2200 which resulting in having to perform AvgPooling
+        #     output = F.upsample(output, scale_factor=2, mode='bilinear')
+        #     gray = F.upsample(gray, scale_factor=2, mode='bilinear')
         return output, latent # Want to see what is this latent!
 
 
@@ -594,7 +592,7 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
 
         sequence+=[nn.Conv2d(ndf*nf_mult,1,kernel_size=4,stride=1,padding=2)]
 
-        # Reda up on the story about the sigmoid at the end. If yes, += it here
+        # Read up on the story about the sigmoid at the end. If yes, += it here
 
         self.model=nn.Sequential(*sequence)
 
