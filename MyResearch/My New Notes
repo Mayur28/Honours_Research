@@ -1,24 +1,31 @@
 MAJOR OVERHAUL NEEDED!!!!
-KEEPS BREAKING!!! ( SOMETIMES AT 10, SOMETIMES AT 30)... Gives weird effects
 
+For data Augmentation
+I should ensure that the post results is still within [-1,1]
+Rotations and flipping for sure
+Noise injection
+imgaug will go in the tranforms function( we can then form an array of different transforms accordingly)
 
-Just to make sure, I've added back the individual patch and the subtracted terms... Seems to be working now but briefly threaten the gross result
-For above, investigate further, the result still seems quite brittle
-
+To Do Today
+Try to incorporate data augmentation ( using imgaug which seems very easy)... Define around 7 different... Look into what are the available options
+Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
+Read EGAN paper and fully understand the gaps ( the equations that dont seem to make sense to me))) Particularly the adv loss and relativistic stuff? --> This may be fairly time consuming!
+Fully understand the VGG STUFF
+What is an LSGAN and how does it work and what are the requirements!
+One blog already verifies that we dont have sigmoid at the end of the discriminator ( it says that we need a linear activation--> There exists a built-in called Linear... What is it's purpose?)
+Using an L2 loss penalizes and forces the synthetic dist to match the actual distribution instead of just hoping that the discriminator classifies correctly. We work with the distance between the actually distribution and our sythetic distribution
+Using the original log loss isnt effective as the discs discriminator is saturating, asnd since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
 
 SPICE EVERYTHING UP, TOO SIMILIAR!!!
-Blend it with Mask Shadow GAN
  Find other papers as well
  Do with my own understanding!!!
-This is just temporary, be ruthless thereafter
 
 
-In the pipe line already
-Investigate the effect of increasing the number of patches
-Experiment what happens if I also adjust the disc loss where I do not subtract ( generator held up quite well)--> Check on this again! Something caused the network to derail ( either this or the or that I updated the networks)
 
 
 Concrete To Do List
+Investigate the effect of increasing the number of patches
+Implement Data Augmentation! I Can definitely optimize how this is done. Don't even look at their way
 Experiment the effect when instance normalization is used
 Consider using batch_size=8... Dont be premature in the verdict... Read hardt carefully before making this a pacifier for everything...
  Really make this my own! Experiment and only if really broken, revert to their altered form
@@ -33,15 +40,11 @@ Consider using batch_size=8... Dont be premature in the verdict... Read hardt ca
  # They are using maxpooling in the generator, not avg_pooling... Check Radford's approach to downsampling
  # Default setting doesn't use 'lighten' which normalizes the attention map... Experiment with this! Only appears just before
  #the attention map calculation...
- Overhaul the entire structure as if I were starting from scratch
  # Focus on reducing noise!
  Look into optimizing choice of batch size ( this seems very influential)... smaller batches= more significant changes per an update ( this is
  more noisy, though, the noise can help with the model's generalization capabilities)
- Make sure the configuration of the PatchGAN is perfect! ( Structurally)
  Check what exactly is going on in backward_G
 Investigate the effect of increasing the number of patches that we extract
-Look into better ways of handling the backward functions (particularly the loss function stuff)--> Very messy
-Try working with cv2 once more!
 Check if eventually decaying the learning rate is really useful or not.
 
 
@@ -72,12 +75,12 @@ Look into better ways of handling the backward functions (particularly the loss 
  Look into how vgg and vgg_loss are different... self.vgg_loss.compute_vgg_loss(self.vgg)... vgg_loss is a class and useful and uses the accepts self.vgg as input ... vgg is only the network, nothing else!
  Why was relu5_1 used for the VGG network?
  Investigate thoroughly how is the forward function of the VGG network being called implicitly. Might be that when called, it calls the other function that is not the __init__ function
+ Check if eventually decaying the learning rate is really useful or not.
 
 
 
 Other notes
 THe PatchGAN structure is perfect!
-Im not subtracting in both the gen and disc losses... Paired with this, Im using 8 batches of patches ( 2 more than EGAN)--> It definitely starts slower and get decent results only after a long while but Radford quotes Hardt et al. that proves the relationship between rate of convergence and generalization quality
 Note! Increasing from EGAN 6 patches to 8 patches, improvement seems likely but increases the runtime by 4-5 seconds... Dont only focus on runtime and neglect quality of results.... I like the results when 8 patches are used despite the longer runtime... Mention this caveat in the report
 
 From Radford
@@ -91,3 +94,87 @@ lr=0.0002... 0.5 beta1
 Recent analysis has shown that there is a direct link between how fast models learn and their generalization performance (Hardt et al., 2015).
 For above, dont get premature with initial results, wait it out.
 Surprisingly, Mask shadow GAN obeys alot from Radford but uses Instance norm in both networks
+
+
+
+Notes
+
+- Note the pattern for the number of filters used in the generator, when downsampling, the number of filters doubles. When upsampling, the number of filters is halved. Additionally, The number of filters is equal in mirrored layers (for example. the first layer has the sample number of filters as the last layer.)
+- Very important, we do not perform normalization in the first layer of the generator. (needs to be accounted for seperately, the rest can be produced algorithmically)--> EGAN has an extra layer and does not use normalization which shouldn't primarily determine the performance of the entire algorithm.
+- My understanding of EGAN is slightly flawed. I thought EGAN primarily uses instance normalization which isnt the case. Instead, it primarily uses batch norm but uses instance norm before the VGG for stability
+- The discriminator is built algorithmically by defining a batch and using it as many times that is specified(n_layers_D)
+- The dataloader loads the data into batches ( and pretty much handles all the data handling) by using the GPU. LOOK INTO THE DATALOADER STUFF THOROUGHLY!! To use the dataloader stuff, it is compulsory to implement the __getitem__ and __len__ magic functions
+- The 'data' training loop is a dictionary where each element is a tensor (with dimensions 16x3xsizexsize). These tensors represent A,B,input_A_gray and input_imgs. It also stores 'A_paths' which is the path to the training images accessed in that batch. Go deeper into how this dictionary is actually formed using the data loader.
+- Remember, single model is the grand network which contains the generator and the discriminator. (we are working with an instance of 'single model'). That is why in 'optimize_parameters', we only calling forward() once which will propagate through the generator and the discriminator.  Note that we are doing the alternating training batches thing as mentioned by Radford.
+- The __getitems__ function in unaligned_dataset is called each iteration and is used to form the dictionary form of the batch with the A,B,input image and attention map!
+I changed DataParallel (towards the end of the definition of the generator and the discriminator) because at the moment, I'm only using one GPU.This function basically chunks the input across all the GPU's (uncomment if Shun makes a plan)
+- When they say that they concatenate and reshaping the attention maps to the filter size, we actually do this in the decoder( get multiplied when we are upsampling)
+- When I want to see the latent stuff, the attention map and the patchs, uncomment the original dictionary setting.
+- It appears that the output is formed by multiplying the latent image with the low-light image.
+- Mask- Shadow GAN has it like original paper (opposite to EGAN) : They put Norm. before Relu????
+- The LSGAN can be implemented by using the target values of 1.0 for real and 0.0 for fake images and optimizing the model using the mean squared error (MSE) loss function, e.g. L2 loss. The output layer of the discriminator model must be a linear activation function.
+- Check if there is a resize function in single_model.py ( There isn't in the entire project. Note that looking at the base_dataset, it accepts torch.utils.data which is built-in and explicitly specifies that egt_im and len need to be overwritten). the 'resize_' function is a built-in tensor function.
+- The type/ form of training data can have a huge impact on what the GAN achieves
+
+
+
+Questions
+- Where does the perceptual loss fit in?
+- I see where we are calculating the attention map but I dont see where are we using it. A) When upsampling in the generator, we are also resizing them to match the feature map sizes.
+- Understand how the filters, kernels and strides are configured to achieve different things (In our case, it is just a matter of doubling the number of filters compared to the previous layer and vice versa when upsampling.)
+- How are we enforcing that the range of the generator's output is between [-1, 1]?
+- Find out the following from Richard: Find out the following: Its usually Conv->Batch-> Relu but here its Conv-> Relu->Batch. Answer! MLM states that this is not an issue. Org. paper has it like normal but experimentation revealed that better perf.
+is achieved if placed after the activation layer. If possible, try to test both!
+- Why do many of the classes accept a parameter? An example being the unaligned_dataset class in unaligned_dataset.py
+- In vgg_preprocess, why are the colour channels reversed?
+
+
+To Do List
+- Mask-Shadow GAN uses tanh on the output of the generator. ( But are they using LSGAN -> yes). Try to include in my implementation?
+- Read up on the LSGAN loss! (Read MLM's article on LSGAN
+) Very Important!!!
+- I MUST BLEND WITH THE PyTorch DCGAN EXAMPLE AND CHECK THE OVERLAPS AND DISPARITIES
+- Check what size images we are working with. The paper and dataset reflects 600x400 but the processing seems to account for 320x320
+
+- In the long term, I may need to compile better datasets. I dont think training for the 2 roles simulataneously is a viable solution. FIND A BETTER STRATEGY TO TRAIN FOR THE 2 TASKS
+
+- Try to display the many aspects within the generator when doing a forward pass (what do the many resized attention maps or the latent result look like before any further processing)
+
+
+- Confirm the story of switching the labels in backward_G!
+
+- Look into the main functions (the arch. of the networks as well as how they forward and back propagate)
+- Confirm the switching of labels in the backward_G function
+- It appears that the output is formed by multiplying the latent image with the low-light image. (Verify this!)
+- READ ENLIGHTEN
+-  GET MY FINAL VERSION OF THE CODE READY (WITH ALL THE NECESSARY AMENDMENTS PERFORMED!!!)
+- Check what is going on in backward_G as to how the  loss_G_A is computed (why are they switched?)
+- Where are acknowledging that skip connections are used, but it doesnt seem as if we are actually including any information in the attention modules(<-- what EGAN calls it)
+- Check if I can optimize how VGG can be used!
+- Check what is the purpose of the latent result
+- I dont see where is the vgg forward function called? In the Perceptual loss class, I see that we are using the vgg network but I dont see where we explicitly forward propagate. We dont, but investigate how is a result produced if we do not forward propagate
+- For some reason, we dont ever set the discriminators to trainable? --> Not neccesary as this is the default
+
+My Experimentations:
+- To upsample in the generator, try the transpose convolutional layer
+- Check what happens if I remove the resize in the set_input function (single model.py)
+- Its okay if our training results seem small because for the prediction process, the original size is maintained.
+- Try to filter out line 265 in single_model.py. It seems to me that many aspects are redundant.
+- Try another form of downsampling in the generator( to remove the maxpooling)
+- Since I'm assuming that the model is being trained for even darkness, take matters into my own hands and try with my own images to verify!
+-TRY TO PUT THE BATCH NORMALIZATION BEFORE THE LReLu(MLM says before but many forums found empirically that BN after LReLu performs better)
+- See what happens if we dont decay the learning rate after 100 epochs
+- For my experiment on batch vs instance normalization, there is a dedicated function (nn.InstanceNorm2d(in_features)--> Look into it more!)
+-DO NOT MESS WITH THE DISCRIMINATOR, THE DISCRIMINATOR IS THE GOSPEL TRUTH (EGAN AND MSG have the same form of discriminator.)
+
+- (Outcome Pending) It is what it is when I train one after another but tell them its the conflicting between the 2. Its not the architecture since most shadow removals use my architecture. Show when trained seperately and bring it to Hairong's attention. She said herself to train sequentially!
+- I see that they are using maxpooling, I should see if I can instead use the transpose_conv to down sample(This move is backed by Radford)
+
+Notes for the Report:
+- For the report, I should definitely include a diagram of the architecture since she specifically asked for it ( but it needs to be indistinguishable from Enlighten-GAN!)
+- (Outcome pending on this) In my report, I should show off that I dont need anything too dramatic for shadow detection (like ST-CGAN that dedicates an entire GAN for it)
+- (Outcome pending) Find a way to do erosion and dilation to the attention map. Try doing these operations before adding to tensor but the noise removal will probably be expensive.
+- When writing the report, describe how the data is pre-processed!
+- In my write-up make sure I mention that Im using LSGAN loss and explain it. In the discriminator, instead of just being right or wrong, it tells how right or wrong we are.
+- Find a way to remove the noise
+- Be absolutely precise when it comes to detail, for example, when discussing the dataset, go into detail of where the images came from, what do they contain, what is it's form(png and size), why did I use it... Were they preprocessed
