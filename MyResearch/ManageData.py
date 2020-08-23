@@ -7,6 +7,7 @@ import torchvision.transforms as transforms# Try to remove
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+import imgaug.augmenters as iaa
 
 
 def DataLoader(opt):
@@ -29,10 +30,12 @@ def import_dataset(directory):
 
 def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop (THIS IS WHERE MY DATA AUGMENTATION WILL GO. RIGHT NOW, IM ONLY DOING RANDOM CROPPING)
     trans_list=[]
-    trans_list.append(transforms.RandomCrop(opt.crop_size))
 
     #To normalize the data to the range [-1,1]
-    trans_list+=[transforms.ToTensor(),transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]# this is neat. Looking at one channel (column), we are specifying mean=std=0.5 which normalizes the images to [-1,1]
+    trans_list+=[transforms.RandomCrop(opt.crop_size),\
+    iaa.Flipud(1.0),\
+    transforms.ToTensor(),\
+    transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]# this is neat. Looking at one channel (column), we are specifying mean=std=0.5 which normalizes the images to [-1,1]
     return transforms.Compose(trans_list)
 
 class DataLoader:
