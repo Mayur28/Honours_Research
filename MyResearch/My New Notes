@@ -1,19 +1,13 @@
 MAJOR OVERHAUL NEEDED!!!!
 
-For data Augmentation --> I definitely shoult be doing this
-I should ensure that the post results is still within [-1,1]
-Rotations and flipping for sure
-Noise injection
 
 To Do Today
-Try to incorporate data augmentation
 Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
 Read EGAN paper and fully understand the gaps ( the equations that dont seem to make sense to me))) Particularly the adv loss and relativistic stuff? --> This may be fairly time consuming!
 Fully understand the VGG STUFF
-What is an LSGAN and how does it work and what are the requirements!
 One blog already verifies that we dont have sigmoid at the end of the discriminator ( it says that we need a linear activation--> There exists a built-in called Linear... What is it's purpose?)
 Using an L2 loss penalizes and forces the synthetic dist to match the actual distribution instead of just hoping that the discriminator classifies correctly. We work with the distance between the actually distribution and our sythetic distribution
-Using the original log loss isn't effective as the discs discriminator is saturating, asnd since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
+Using the original log loss isn't effective as the discs discriminator is saturating, and since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
 
 
 LSGAN notes
