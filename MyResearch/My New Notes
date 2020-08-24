@@ -7,9 +7,11 @@ I think that I should stay away from lr=0.0002, seems to be causing the model to
 For any verification, execute "Minor changes to Perfect" from GitHub
 It is now verified that it was the 0.0002 lr that caused the weird effects
 Look into any potential Perceptual Loss enhancements!
-# Check what is the best way to downsample
+# Check what is the best way to downsample--> EGAN: MaxPool.... I'm following Radford and doing fractionally strided convolution
 
 To Do Today
+Sort out upsampling in Generator ( remove there bilinear and conv layer nonsense)
+
 Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
 Read EGAN paper and fully understand the gaps ( the equations that dont seem to make sense to me))) Particularly the adv loss and relativistic stuff? --> This may be fairly time consuming!
 Fully understand the VGG STUFF

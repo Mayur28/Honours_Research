@@ -325,98 +325,97 @@ class Unet_generator1(nn.Module):
         self.opt=opt
         # These will be used to resize the attention map to fit the latent result at each upsampling step
         # Check what is the best way to downsample
-        self.att_downsize = nn.MaxPool2d(2)# This is seperate (this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
+        self.att_downsize = nn.Conv2d(1, 1, 3, stride=2, padding=1)# This is seperate (this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
 
         # I should create a function to create these modules. Ridiculously shoddy!
 
         self.conv1_1=nn.Conv2d(4,32,3,padding=1)# 4 because of the the RGB image and the attention map...
-        self.LRelu1_1=nn.LeakyReLU(0.2,inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
+        self.Relu1_1=nn.ReLU(inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
         if(self.opt.norm_type=='Batch'): # I have batch by they have it as use_norm which is the L1 loss weight
             self.norm1_1=nn.BatchNorm2d(32)
         else:
             self.norm1_1=nn.InstanceNorm2d(32)
         self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
-        self.LRelu1_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu1_2 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='Batch'):
             self.norm1_2 = nn.BatchNorm2d(32)
         else:
             self.norm1_2=nn.InstanceNorm2d(32)
-        self.max_pool1 = nn.MaxPool2d(2)# Try to get rid of this form of downsampling (Read Radford)
+        self.down_samp1 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
 
 
         self.conv2_1=nn.Conv2d(32,64,3,padding=1)
-        self.LRelu2_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu2_1=nn.ReLU(inplace=True)
         if(self.opt.norm_type=='Batch'):
             self.norm2_1=nn.BatchNorm2d(64)
         else:
             self.norm2_1=nn.InstanceNorm2d(64)
 
         self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.LRelu2_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu2_2 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='Batch'):
             self.norm2_2 = nn.BatchNorm2d(64)
         else:
             self.norm2_2=nn.InstanceNorm2d(64)
-        self.max_pool2 = nn.MaxPool2d(2)
+        self.down_samp2 =nn.Conv2d(64, 64, 3, stride=2, padding=1)
 
 
         self.conv3_1=nn.Conv2d(64,128,3,padding=1)
-        self.LRelu3_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu3_1=nn.ReLU(inplace=True)
         if(self.opt.norm_type=='Batch'):
             self.norm3_1=nn.BatchNorm2d(128)
         else:
             self.norm3_1=nn.InstanceNorm2d(128)
         self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.LRelu3_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu3_2 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='Batch'):
             self.norm3_2 = nn.BatchNorm2d(128)
         else:
             self.norm3_2=nn.InstanceNorm2d(128)
-        self.max_pool3 = nn.MaxPool2d(2)
+        self.down_samp3 = nn.Conv2d(128, 128, 3, stride=2, padding=1)
 
 
         self.conv4_1=nn.Conv2d(128,256,3,padding=1)
-        self.LRelu4_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu4_1=nn.ReLU(inplace=True)
         if(opt.norm_type=='Batch'):
             self.norm4_1=nn.BatchNorm2d(256)
         else:
             self.norm4_1=nn.InstanceNorm2d(256)
         self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.LRelu4_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu4_2 = nn.ReLU(inplace=True)
         if (opt.norm_type=='Batch'):
             self.norm4_2 = nn.BatchNorm2d(256)
         else:
             self.norm4_2=nn.InstanceNorm2d(256)
-        self.max_pool4 = nn.MaxPool2d(2)
+        self.down_samp4 = nn.Conv2d(256, 256, 3, stride=2, padding=1)
 
 
 
         self.conv5_1=nn.Conv2d(256,512,3,padding=1)
-        self.LRelu5_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu5_1=nn.ReLU(inplace=True)
         if(opt.norm_type=='Batch'):
             self.norm5_1=nn.BatchNorm2d(512)
         else:
             self.norm5_1=nn.InstanceNorm2d(512)
         self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.LRelu5_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu5_2 = nn.ReLU(inplace=True)
         if (opt.norm_type=='Batch'):
             self.norm5_2 = nn.BatchNorm2d(512)
         else:
             self.norm5_2=nn.InstanceNorm2d(512)
-        self.max_pool5 = nn.MaxPool2d(2)# OVer and above everything, these maxpools can be removed because each is not different from each other.
 
 
         #The bottleneck has been reached, we now enter the decoder. We need to now upsample to produce the sample.
         # self.deconv5 = nn.ConvTranspose2d(512, 256, 2, stride=2)# IT SEEMS THAT THEY ALREADY ATTEMPTED WHAT I WANTED TO DO( USE THE TRANSPOSE CONV LAYER TO UPSAMPLE)
         self.deconv5 = nn.Conv2d(512, 256, 3, padding=1) # Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
         self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1) # In the forward pass, this will be used with the bilinear parameter
-        self.LRelu6_1 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu6_1 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm6_1 =  nn.BatchNorm2d(256)
         else:
             self.norm6_1= nn.InstanceNorm2d(256)
         self.conv6_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.LRelu6_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu6_2 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm6_2 =  nn.BatchNorm2d(256)
         else:
@@ -424,13 +423,13 @@ class Unet_generator1(nn.Module):
 
         self.deconv6=nn.Conv2d(256,128,3,padding=1)
         self.conv7_1=nn.Conv2d(256,128,3,padding=1)
-        self.LRelu7_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu7_1=nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm7_1 =  nn.BatchNorm2d(128)
         else:
             self.norm7_1= nn.InstanceNorm2d(128)
         self.conv7_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.LRelu7_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu7_2 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm7_2 =  nn.BatchNorm2d(128)
         else:
@@ -440,13 +439,13 @@ class Unet_generator1(nn.Module):
 
         self.deconv7=nn.Conv2d(128,64,3,padding=1)
         self.conv8_1=nn.Conv2d(128,64,3,padding=1)
-        self.LRelu8_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu8_1=nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm8_1 =  nn.BatchNorm2d(64)
         else:
             self.norm8_1= nn.InstanceNorm2d(64)
         self.conv8_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.LRelu8_2 = nn.LeakyReLU(0.2, inplace=True)
+        self.Relu8_2 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm8_2 =  nn.BatchNorm2d(64)
         else:
@@ -455,17 +454,17 @@ class Unet_generator1(nn.Module):
 
         self.deconv8=nn.Conv2d(64,32,3,padding=1)
         self.conv9_1=nn.Conv2d(64,32,3,padding=1)
-        self.LRelu9_1=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu9_1=nn.ReLU(inplace=True)
         if(self.opt.norm_type=='batch'):
             self.norm9_1=nn.BatchNorm2d(32)
         else:
             self.norm9_1=nn.InstanceNorm2d(32)
         self.conv9_2=nn.Conv2d(32,32,3,padding=1)
-        self.LRelu9_2=nn.LeakyReLU(0.2,inplace=True)
+        self.Relu9_2=nn.ReLU(inplace=True)
 
         self.conv10=nn.Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
         # Look into this tanh function to ensure that we are withing [-1,1]
-        #self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
+        self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
 
     def forward(self,input,gray): # We forward propagate a batch at a time!
         # flag=0
@@ -481,12 +480,8 @@ class Unet_generator1(nn.Module):
 
 
         # First downsample the attention map for all stages
-        #print("Size of attention map( Before)")
-        #print(gray.size())
-        gray_2=self.att_downsize(gray)
-        #print("Size of attention map(After)")
-        #print(gray2.size())
 
+        gray_2=self.att_downsize(gray)
         gray_3=self.att_downsize(gray_2)
         gray_4=self.att_downsize(gray_3)
         gray_5=self.att_downsize(gray_4)
@@ -503,19 +498,19 @@ class Unet_generator1(nn.Module):
         x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
 
         conv1=self.norm1_2(self.LRelu1_2(self.conv1_2(x)))
-        x=self.max_pool1(conv1)
+        x=self.down_samp1(conv1)
 
         x=self.norm2_1(self.LRelu2_1(self.conv2_1(x)))
         conv2=self.norm2_2(self.LRelu2_2(self.conv2_2(x)))
-        x=self.max_pool2(conv2)
+        x=self.down_samp2(conv2)
 
         x=self.norm3_1(self.LRelu3_1(self.conv3_1(x)))
         conv3=self.norm3_2(self.LRelu3_2(self.conv3_2(x)))
-        x=self.max_pool3(conv3)
+        x=self.down_samp3(conv3)
 
         x=self.norm4_1(self.LRelu4_1(self.conv4_1(x)))
         conv4=self.norm4_2(self.LRelu4_2(self.conv4_2(x)))
-        x=self.max_pool4(conv4)
+        x=self.down_samp4(conv4)
 
         x=self.norm5_1(self.LRelu5_1(self.conv5_1(x)))
         x=x*gray_5
