@@ -406,9 +406,9 @@ class Unet_generator1(nn.Module):
 
 
         #The bottleneck has been reached, we now enter the decoder. We need to now upsample to produce the sample.
-        # self.deconv5 = nn.ConvTranspose2d(512, 256, 2, stride=2)# IT SEEMS THAT THEY ALREADY ATTEMPTED WHAT I WANTED TO DO( USE THE TRANSPOSE CONV LAYER TO UPSAMPLE)
-        self.deconv5 = nn.Conv2d(512, 256, 3, padding=1) # Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
-        self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1) # In the forward pass, this will be used with the bilinear parameter
+        self.deconv5 = nn.ConvTranspose2d(512, 256, 2, stride=2)# IT SEEMS THAT THEY ALREADY ATTEMPTED WHAT I WANTED TO DO( USE THE TRANSPOSE CONV LAYER TO UPSAMPLE)
+        #self.deconv5 = nn.Conv2d(512, 256, 3, padding=1) # Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
+        #self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1) # In the forward pass, this will be used with the bilinear parameter
         self.Relu6_1 = nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm6_1 =  nn.BatchNorm2d(256)
@@ -421,8 +421,10 @@ class Unet_generator1(nn.Module):
         else:
             self.norm6_2 = nn.InstanceNorm2d(256)
 
-        self.deconv6=nn.Conv2d(256,128,3,padding=1)
-        self.conv7_1=nn.Conv2d(256,128,3,padding=1)
+
+        #self.deconv6=nn.Conv2d(256,128,3,padding=1)
+        #self.conv7_1=nn.Conv2d(256,128,3,padding=1)
+        self.deconv6 = nn.ConvTranspose2d(256, 128, 2, stride=2)
         self.Relu7_1=nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm7_1 =  nn.BatchNorm2d(128)
@@ -437,8 +439,8 @@ class Unet_generator1(nn.Module):
 
 
 
-        self.deconv7=nn.Conv2d(128,64,3,padding=1)
-        self.conv8_1=nn.Conv2d(128,64,3,padding=1)
+        self.deconv7 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+        #self.conv8_1=nn.Conv2d(128,64,3,padding=1)
         self.Relu8_1=nn.ReLU(inplace=True)
         if (self.opt.norm_type=='batch'):
             self.norm8_1 =  nn.BatchNorm2d(64)
@@ -452,8 +454,8 @@ class Unet_generator1(nn.Module):
             self.norm8_2=nn.InstanceNorm2d(64)
 
 
-        self.deconv8=nn.Conv2d(64,32,3,padding=1)
-        self.conv9_1=nn.Conv2d(64,32,3,padding=1)
+        self.deconv8=nn.ConvTranspose2d(64, 32, 2, stride=2)
+        #self.conv9_1=nn.Conv2d(64,32,3,padding=1)
         self.Relu9_1=nn.ReLU(inplace=True)
         if(self.opt.norm_type=='batch'):
             self.norm9_1=nn.BatchNorm2d(32)
@@ -518,34 +520,26 @@ class Unet_generator1(nn.Module):
 
         #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
         # Experiment here to see if bilinear upsampling really is this best option.
-        print("Before bilinear")
-        print(conv5.size())
-        conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
+
+
         conv4=conv4*gray_4
-        print("Size of the multiplication stuff")
-        print(conv4.size())
         up6=torch.cat([self.deconv5(conv5),conv4],1)
-        print("Size of up6")
-        print(up6.size())
-        x=self.norm6_1(self.Relu6_1(self.conv6_1(up6)))
+        x=self.norm6_1(self.Relu6_1(up6))
         conv6=self.norm6_2(self.Relu6_2(self.conv6_2(x)))
 
-        conv6=F.upsample(conv6,scale_factor=2,mode='bilinear')
         conv3=conv3*gray_3
         up7=torch.cat([self.deconv6(conv6),conv3],1)
-        x=self.norm7_1(self.Relu7_1(self.conv7_1(up7)))
+        x=self.norm7_1(self.Relu7_1(up7))
         conv7=self.norm7_2(self.Relu7_2(self.conv7_2(x)))
 
-        conv7=F.upsample(conv7,scale_factor=2,mode='bilinear')
         conv2=conv2*gray_2
         up8=torch.cat([self.deconv7(conv7),conv2],1)
-        x=self.norm8_1(self.Relu8_1(self.conv8_1(up8)))
+        x=self.norm8_1(self.Relu8_1(up8))
         conv8=self.norm8_2(self.Relu8_2(self.conv8_2(x)))
 
-        conv8=F.upsample(conv8,scale_factor=2,mode='bilinear')
         conv1=conv1*gray
         up9=torch.cat([self.deconv8(conv8),conv1],1)
-        x=self.norm9_1(self.Relu9_1(self.conv9_1(up9)))
+        x=self.norm9_1(self.Relu9_1(up9))
         conv9=self.Relu9_2(self.conv9_2(x))
 
         latent = self.conv10(conv9)
@@ -581,7 +575,7 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
             nf_mult_prev=nf_mult
             nf_mult=min(2**n,8)
             sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
-            nn.BatchNorm2d(ndf*ng_mult);
+            nn.BatchNorm2d(ndf*nf_mult),
             nn.LeakyReLU(0.2,True)]
 
         nf_mult_prev=nf_mult
