@@ -518,10 +518,15 @@ class Unet_generator1(nn.Module):
 
         #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
         # Experiment here to see if bilinear upsampling really is this best option.
-
+        print("Before bilinear")
+        print(conv5.size())
         conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
         conv4=conv4*gray_4
+        print("Size of the multiplication stuff")
+        print(conv4.size())
         up6=torch.cat([self.deconv5(conv5),conv4],1)
+        print("Size of up6")
+        print(up6.size())
         x=self.norm6_1(self.Relu6_1(self.conv6_1(up6)))
         conv6=self.norm6_2(self.Relu6_2(self.conv6_2(x)))
 
@@ -543,7 +548,7 @@ class Unet_generator1(nn.Module):
         x=self.norm9_1(self.Relu9_1(self.conv9_1(up9)))
         conv9=self.Relu9_2(self.conv9_2(x))
 
-        latent = self.conv10(conv9)# What is this for?
+        latent = self.conv10(conv9)
         #Latent Size = torch.Size([16, 3, 320, 320])
 
         latent = latent*gray
