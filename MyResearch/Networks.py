@@ -495,26 +495,26 @@ class Unet_generator1(nn.Module):
         #Input Size: torch.Size([16, 3, 320, 320])
 
         #Surely below can be automated!!!, do right at the end when I know what I'm doing!
-        x=self.norm1_1(self.LRelu1_1(self.conv1_1(torch.cat((input,gray),1))))
+        x=self.norm1_1(self.Relu1_1(self.conv1_1(torch.cat((input,gray),1))))
 
-        conv1=self.norm1_2(self.LRelu1_2(self.conv1_2(x)))
+        conv1=self.norm1_2(self.Relu1_2(self.conv1_2(x)))
         x=self.down_samp1(conv1)
 
-        x=self.norm2_1(self.LRelu2_1(self.conv2_1(x)))
-        conv2=self.norm2_2(self.LRelu2_2(self.conv2_2(x)))
+        x=self.norm2_1(self.Relu2_1(self.conv2_1(x)))
+        conv2=self.norm2_2(self.Relu2_2(self.conv2_2(x)))
         x=self.down_samp2(conv2)
 
-        x=self.norm3_1(self.LRelu3_1(self.conv3_1(x)))
-        conv3=self.norm3_2(self.LRelu3_2(self.conv3_2(x)))
+        x=self.norm3_1(self.Relu3_1(self.conv3_1(x)))
+        conv3=self.norm3_2(self.Relu3_2(self.conv3_2(x)))
         x=self.down_samp3(conv3)
 
-        x=self.norm4_1(self.LRelu4_1(self.conv4_1(x)))
-        conv4=self.norm4_2(self.LRelu4_2(self.conv4_2(x)))
+        x=self.norm4_1(self.Relu4_1(self.conv4_1(x)))
+        conv4=self.norm4_2(self.Relu4_2(self.conv4_2(x)))
         x=self.down_samp4(conv4)
 
-        x=self.norm5_1(self.LRelu5_1(self.conv5_1(x)))
+        x=self.norm5_1(self.Relu5_1(self.conv5_1(x)))
         x=x*gray_5
-        conv5=self.norm5_2(self.LRelu5_2(self.conv5_2(x)))
+        conv5=self.norm5_2(self.Relu5_2(self.conv5_2(x)))
 
         #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
         # Experiment here to see if bilinear upsampling really is this best option.
@@ -522,39 +522,34 @@ class Unet_generator1(nn.Module):
         conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
         conv4=conv4*gray_4
         up6=torch.cat([self.deconv5(conv5),conv4],1)
-        x=self.norm6_1(self.LRelu6_1(self.conv6_1(up6)))
-        conv6=self.norm6_2(self.LRelu6_2(self.conv6_2(x)))
+        x=self.norm6_1(self.Relu6_1(self.conv6_1(up6)))
+        conv6=self.norm6_2(self.Relu6_2(self.conv6_2(x)))
 
         conv6=F.upsample(conv6,scale_factor=2,mode='bilinear')
         conv3=conv3*gray_3
         up7=torch.cat([self.deconv6(conv6),conv3],1)
-        x=self.norm7_1(self.LRelu7_1(self.conv7_1(up7)))
-        conv7=self.norm7_2(self.LRelu7_2(self.conv7_2(x)))
+        x=self.norm7_1(self.Relu7_1(self.conv7_1(up7)))
+        conv7=self.norm7_2(self.Relu7_2(self.conv7_2(x)))
 
         conv7=F.upsample(conv7,scale_factor=2,mode='bilinear')
         conv2=conv2*gray_2
         up8=torch.cat([self.deconv7(conv7),conv2],1)
-        x=self.norm8_1(self.LRelu8_1(self.conv8_1(up8)))
-        conv8=self.norm8_2(self.LRelu8_2(self.conv8_2(x)))
+        x=self.norm8_1(self.Relu8_1(self.conv8_1(up8)))
+        conv8=self.norm8_2(self.Relu8_2(self.conv8_2(x)))
 
         conv8=F.upsample(conv8,scale_factor=2,mode='bilinear')
         conv1=conv1*gray
         up9=torch.cat([self.deconv8(conv8),conv1],1)
-        x=self.norm9_1(self.LRelu9_1(self.conv9_1(up9)))
-        conv9=self.LRelu9_2(self.conv9_2(x))
+        x=self.norm9_1(self.Relu9_1(self.conv9_1(up9)))
+        conv9=self.Relu9_2(self.conv9_2(x))
 
         latent = self.conv10(conv9)# What is this for?
         #Latent Size = torch.Size([16, 3, 320, 320])
 
         latent = latent*gray
 
-        #if self.opt.tanh:
-        #    latent = self.tanh(latent)# Oddly does not apply to us
+        latent = self.tanh(latent)
         output = latent + input*float(self.opt.skip)# This is a breakthrough! The latent result is added to the low-light image to form the output.
-
-        # if flag == 1: # If fineSize>2200 which resulting in having to perform AvgPooling
-        #     output = F.upsample(output, scale_factor=2, mode='bilinear')
-        #     gray = F.upsample(gray, scale_factor=2, mode='bilinear')
         return output, latent # Want to see what is this latent!
 
 
@@ -567,13 +562,12 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
             no_layers=self.opt.n_layers_patchD
         else:
             no_layers=self.opt.n_layers_D
-
+        # Needs to be treated seperately (as advised by Radford - we dont apply on output of generator and input of discriminator)
         sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2),nn.LeakyReLU(0.2,True)]
         # The rubbish below can be modified!
         #Filter out this rubbish ( Warning 1 - its the simple input output procedure)
         # Output collapses from 512 - 1... Check what does the 1 activation map represent
         # Needs to be completely restructured according to Radford
-        # Check if we need to include sigmoid at the end?
         # Look at flagship papers, as well as morphing EGAN's alternate implementations and get ideas from other papers
         ndf=64
         nf_mult=1
@@ -582,15 +576,17 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
             nf_mult_prev=nf_mult
             nf_mult=min(2**n,8)
             sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
+            nn.BatchNorm2d(ndf*ng_mult);
             nn.LeakyReLU(0.2,True)]
 
         nf_mult_prev=nf_mult
         nf_mult= min(2*no_layers,8)
-        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2),nn.LeakyReLU(0.2,True)]
+        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2),
+        nn.BatchNorm2d(ndf*nf_mult),
+        nn.LeakyReLU(0.2,True)]
 
         sequence+=[nn.Conv2d(ndf*nf_mult,1,kernel_size=4,stride=1,padding=2)]
 
-        # Read up on the story about the sigmoid at the end. If yes, += it here
 
         self.model=nn.Sequential(*sequence)
 
