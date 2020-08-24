@@ -1,5 +1,13 @@
 MAJOR OVERHAUL NEEDED!!!!
 
+Experimenting with how the attention map is attained
+There's seems to be converging much faster than mine
+What seems odd is that they divide there greyscale image by 2... Try with halving mine as well... See if I can bias my approach somehow
+I think that I should stay away from lr=0.0002, seems to be causing the model to collapse( Verify this soon!)
+For any verification, execute "Minor changes to Perfect" from GitHub
+It is now verified that it was the 0.0002 lr that caused the weird effects
+Look into any potential Perceptual Loss enhancements!
+# Check what is the best way to downsample
 
 To Do Today
 Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time

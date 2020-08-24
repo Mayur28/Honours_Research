@@ -69,13 +69,13 @@ class SetupTraining():
         self.parser.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
         self.parser.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
         self.parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
-        self.parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
+        self.parser.add_argument('--lr', type=float, default=0.0001, help='initial learning rate for adam')
         # EGAN used 0.0001 but Radford recommended 0.0002
         self.parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
         self.isTrain = True
 
 
-    def process(self): # This is sorted!
+    def process(self): # I dont need to be printing the display and other useless information
         self.opt = self.parser.parse_args()
         self.opt.isTrain = self.isTrain
 

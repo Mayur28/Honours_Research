@@ -17,7 +17,7 @@ from collections import OrderedDict
 # Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
 
 
-def weights_init(model):
+def weights_init(model): # This is optimized!!!
     class_name=model.__class__.__name__
     if class_name.find('Conv')!=-1:
         torch.nn.init.normal_(model.weight.data,0.0,0.02)
@@ -35,7 +35,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.input_img=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)
         self.input_A_gray=torch.cuda.FloatTensor(opt.batch_size,1,opt.crop_size,opt.crop_size)# this is for the attention maps
 
-        self.vgg_loss=PerceptualLoss(opt) # Use the alternate implementation when experimenting
+        self.vgg_loss=PerceptualLoss(opt)
         self.vgg_loss.cuda()#--> Shift to the GPU
 
         self.vgg=load_vgg(self.opt.gpu_ids)#This is for data parallelism
@@ -46,7 +46,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         for weights in self.vgg.parameters():# THIS IS THE BEST WHY OF DOING THIS
             weights.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
 
-
+        # Above looks optimized
+        # We shouldnt be coming here in the first place when we are testin, just load directly from the latest model that we saved
         self.Gen=make_G(opt)
 
         if(self.opt.isTrain): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
@@ -232,6 +233,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         # Experiment alot to see what is this latent stuff and what is it used for
         # What does the .data do?
+        # In the final version, these can be commented out, we dont want to unnecesary be converting stuff
         latent_real_A=TensorToImage(self.latent_real_A.data)
         latent_show=LatentToImage(self.latent_real_A.data)
 
@@ -321,12 +323,11 @@ class Unet_generator1(nn.Module):
         super(Unet_generator1,self).__init__()
 
         self.opt=opt
-        # Surely I only need one of the MaxPooling layers, they are pretty much identical!
         # These will be used to resize the attention map to fit the latent result at each upsampling step
-        # Try to avoid MaxPool and duplicacy
+        # Check what is the best way to downsample
         self.att_downsize = nn.MaxPool2d(2)# This is seperate (this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
 
-        # I must just create a function to create these module. Ridiculously shoddy!
+        # I should create a function to create these modules. Ridiculously shoddy!
 
         self.conv1_1=nn.Conv2d(4,32,3,padding=1)# 4 because of the the RGB image and the attention map...
         self.LRelu1_1=nn.LeakyReLU(0.2,inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
@@ -480,7 +481,12 @@ class Unet_generator1(nn.Module):
 
 
         # First downsample the attention map for all stages
+        #print("Size of attention map( Before)")
+        #print(gray.size())
         gray_2=self.att_downsize(gray)
+        #print("Size of attention map(After)")
+        #print(gray2.size())
+
         gray_3=self.att_downsize(gray_2)
         gray_4=self.att_downsize(gray_3)
         gray_5=self.att_downsize(gray_4)
