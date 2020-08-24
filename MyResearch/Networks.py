@@ -577,7 +577,7 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
             nf_mult_prev=nf_mult
             nf_mult=min(2**n,8)
             sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
-            nn.BatchNorm2d(ndf*ng_mult);
+            nn.BatchNorm2d(ndf*nf_mult),
             nn.LeakyReLU(0.2,True)]
 
         nf_mult_prev=nf_mult
