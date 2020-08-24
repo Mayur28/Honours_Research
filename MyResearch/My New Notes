@@ -1,27 +1,34 @@
 MAJOR OVERHAUL NEEDED!!!!
 
-For data Augmentation
+For data Augmentation --> I definitely shoult be doing this
 I should ensure that the post results is still within [-1,1]
 Rotations and flipping for sure
 Noise injection
-imgaug will go in the tranforms function( we can then form an array of different transforms accordingly)
 
 To Do Today
-Try to incorporate data augmentation ( using imgaug which seems very easy)... Define around 7 different... Look into what are the available options
+Try to incorporate data augmentation
 Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
 Read EGAN paper and fully understand the gaps ( the equations that dont seem to make sense to me))) Particularly the adv loss and relativistic stuff? --> This may be fairly time consuming!
 Fully understand the VGG STUFF
 What is an LSGAN and how does it work and what are the requirements!
 One blog already verifies that we dont have sigmoid at the end of the discriminator ( it says that we need a linear activation--> There exists a built-in called Linear... What is it's purpose?)
 Using an L2 loss penalizes and forces the synthetic dist to match the actual distribution instead of just hoping that the discriminator classifies correctly. We work with the distance between the actually distribution and our sythetic distribution
-Using the original log loss isnt effective as the discs discriminator is saturating, asnd since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
+Using the original log loss isn't effective as the discs discriminator is saturating, asnd since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
+
+
+LSGAN notes
+The blog post is intuitive...
+They dont seem to swap the labels for the discriminator, we only do so for the generator ( Compare what is happening here to what EGAN does)
+the least squares loss will penalize generated images based on their distance from the decision boundary.
+The output layer of the discriminator model must be a linear activation function.
+Below is an example configuration from MLM: This involves the use of Convolution-BatchNorm-Activation layer blocks with the use of 2×2 stride for downsampling and transpose convolutional layers for upsampling. LeakyReLU activation layers are used in the discriminator and ReLU activation layers are used in the generator.
+Even MLM is truthful for the discriminator and swaps the label for the generator
 
 SPICE EVERYTHING UP, TOO SIMILIAR!!!
  Find other papers as well
  Do with my own understanding!!!
-
-
-
+The least square loss function is the L2 loss functions
+MLM only mentions a change to the output layer of the discriminator, therefore, I can add in the tanh to the generator's output
 
 Concrete To Do List
 Investigate the effect of increasing the number of patches
@@ -98,7 +105,7 @@ Surprisingly, Mask shadow GAN obeys alot from Radford but uses Instance norm in 
 
 
 Notes
-
+- From a performance perspective, I am capable of achieving about 76 sec epochs in the bare bones approach, although, performance should'nt be made the only priority... EGAN's default is 87 seconds... Mention the tradeoff of speed and quality
 - Note the pattern for the number of filters used in the generator, when downsampling, the number of filters doubles. When upsampling, the number of filters is halved. Additionally, The number of filters is equal in mirrored layers (for example. the first layer has the sample number of filters as the last layer.)
 - Very important, we do not perform normalization in the first layer of the generator. (needs to be accounted for seperately, the rest can be produced algorithmically)--> EGAN has an extra layer and does not use normalization which shouldn't primarily determine the performance of the entire algorithm.
 - My understanding of EGAN is slightly flawed. I thought EGAN primarily uses instance normalization which isnt the case. Instead, it primarily uses batch norm but uses instance norm before the VGG for stability

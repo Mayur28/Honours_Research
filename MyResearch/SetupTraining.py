@@ -13,6 +13,13 @@ import time
 # Theres actually a lot that I removed from 'UnalignedDataset' that appears to relate to data augmentation... Experiment with this
 # What does pool_size do and affect results?
 
+# Calibrate optimize_parameters
+#batch_size
+# Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
+# The normalization type
+# PatchD_3 ( number of images that we are cropping)
+# learning rate
+
 class SetupTraining():
     def __init__(self):
         self.parser=argparse.ArgumentParser()
@@ -28,13 +35,9 @@ class SetupTraining():
 
         self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/MyResearch/', help='models are saved here')
         self.parser.add_argument('--norm_type', type=str, default='batch', help='instance normalization or batch normalization')
-        # We are only cropping, experiment with the other options here!
-        # Check if this is really necessary?
-        self.parser.add_argument('--resize_or_crop', type=str, default='crop', help='scaling and cropping of images at load time [resize_and_crop|crop|scale_width|scale_width_and_crop]')
 
 
         self.parser.add_argument('--skip', default=True, help='B = net.forward(A) + skip*A')
-        self.parser.add_argument('--use_mse', action='store_true', help='MSELoss')
         # use_norm will be set to true by default
         self.parser.add_argument('--use_ragan', default=True, action='store_true', help='use ragan')
         #Sort out the VGG stuff!
@@ -58,7 +61,6 @@ class SetupTraining():
         self.parser.add_argument('--hybrid_loss', default=True, action='store_true', help='use lsgan and ragan separately')
         self.parser.add_argument('--self_attention', default= True,  action='store_true', help='adding attention on the input of generator')
         # We have this! What does it do? Multiplies the latent result to the attention map in the generator... But why?
-        self.parser.add_argument('--times_residual', default=True, action='store_true', help='output = input + residual*attention')
         #Now, the proper training options
         self.parser.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
         self.parser.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')

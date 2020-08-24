@@ -72,11 +72,17 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         input_A_gray=input['A_gray']
         input_img=input['input_img']
 
+        print("Is just normal input_A cuda?")
+        print(input_A.is_cuda)
+
         # This is extremely important and confusing!
         self.input_A.resize_(input_A.size()).copy_(input_A)
         self.input_B.resize_(input_B.size()).copy_(input_B)
         self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
         self.input_img.resize_(input_img.size()).copy_(input_img)
+
+        print("Is fancy version cuda")
+        print(self.input_A.is_cuda)
 
 
         # Whatever comes below needs to be taken care of with extreme caution... Think everything through

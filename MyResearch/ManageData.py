@@ -7,6 +7,7 @@ import torchvision.transforms as transforms# Try to remove
 from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
 
 
 def DataLoader(opt):
@@ -18,28 +19,27 @@ def MakeDataset(opt):
     return dataset
 
 def import_dataset(directory):
-    images = []# This seems to  be the way to go...
-    for root, _, files in sorted(os.walk(directory)):
-        for file_name in files:
-            if  imghdr.what(directory+"/"+file_name)=='png' or  imghdr.what(directory+"/"+file_name)=='jpeg':
-                path = os.path.join(root, file_name)
-                img =Image.open(path).convert('RGB')# cv2.imread(path,1)# Will be read in BGR!
-                images.append(img)
+    images = []
+    for filename in glob.glob(directory+str("/*.png")) or glob.glob(directory+str("/*.jpg")) : # I'm only allowing png and jpg images as training images
+        im=Image.open(filename).convert('RGB')
+        images.append(im)
     return images
 
-def config_transforms(opt):# I Should account for other kinds of transforms such as resize and crop (THIS IS WHERE MY DATA AUGMENTATION WILL GO. RIGHT NOW, IM ONLY DOING RANDOM CROPPING)
+def config_transforms(opt):
     trans_list=[]
-    trans_list.append(transforms.RandomCrop(opt.crop_size))
-
-    #To normalize the data to the range [-1,1]
-    trans_list+=[transforms.ToTensor(),transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]# this is neat. Looking at one channel (column), we are specifying mean=std=0.5 which normalizes the images to [-1,1]
+    # For data augmentation, perform random cropping, sometimes horizontal flipping, sometimes vertical flipping and finalize normalize( to range [-1,1])
+    trans_list+=[transforms.RandomCrop(opt.crop_size),
+    transforms.RandomHorizontalFlip(p=0.25),
+    transforms.RandomVerticalFlip(p=0.25),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]# this is neat. Looking at one channel (column), we are specifying mean=std=0.5 which normalizes the images to [-1,1]
     return transforms.Compose(trans_list)
 
 class DataLoader:
     def __init__(self,opt):
         self.opt=opt
-        self.dataset=MakeDataset(opt)
-        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, num_workers=6)
+        self.dataset=MakeDataset(opt)# Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
+        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, pin_memory=True,num_workers=6)
 
     def load(self):# This will return the iterable over the dataset
         return self.dataloader
@@ -67,12 +67,11 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
-        self.transform=config_transforms(opt)#--> Experiment with data augmentation
+        self.transform=config_transforms(opt)
 
     def __getitem__(self,index):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]
-
 
         A_img=self.transform(A_img)#This is where we actually perform the transformation
         B_img=self.transform(B_img)
