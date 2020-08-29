@@ -1,8 +1,8 @@
 MAJOR OVERHAUL NEEDED!!!!
 
 Compare between "Remove individual patch" and "pinned memory"... Only the network.py is different ( Where I tried to optimize the generator and discriminator)
-# To get a definitive answer, compare the results of optimized version( for 200 epoches) and my "modified" GAN that converges faster but trained for 150 epoches (15000 vs 12000 seconds)
-The optimization improved the rate of convergence but worsened the execution runtime
+My approach has potential but I should seriously consider the proper Unet network...  Ask Hairong about the Unet story before proceeding
+
 Optimized timing: 80-82 secs, old version (that converges and mirrors their approach: 76 secs)
 
 For any verification, execute "Minor changes to Perfect" from GitHub
@@ -10,14 +10,22 @@ It is now verified that it was the 0.0002 lr that caused the weird effects
 Look into any potential Perceptual Loss enhancements!
 
 Question the trade off between quality of results and runtime?
-Its definitely my updated generator and discriminator thats causing an issue...
+Its definitely my updated generator and discriminator that's causing an issue... (in terms of performance)
+Its unable to handle backlit images ( it adds an un-natural tint to the image)
 
 
 To Do Today
-Change the generator to use skip connections!!! Do Not Lie!!!
-Fine tune the attention map --> Today!
-- Check if I can optimize how VGG can be used!
-Check if eventually decaying the learning rate is really useful or not.
+Ask Hairong about the Unet story before proceeding
+They took the generator and the discriminator directly from Isola, Check if my addition of Batch Normalization to the discriminator is feasible or not? Ha!!! The new chinese has Batch Normalization!
+Change the size of the crop size to 256x256 to match Isola!
+ I should work towards improving the colour!--> This should be an after thought after the generator has been redesigned
+- According to Isola, there is a significant improvement in the quality of results when using an encoder-decoder(which is what I have currently) and a proper Unet generator
+- Add in all the small haptics in the architectures that will make a world of differences
+- Look into what image scaling these people use for upsampling: https://arxiv.org/pdf/1501.00092.pdf
+Go with the bilinear upsampling approach (as I currently am) but experiment with this! --> Check if this can be blended in with the new Unet generator
+- READ THE LATEST COLLECTIONS OF ARTICLES AS POSSIBLE  TO GAIN A DEEP UNDERSTANDING
+Check if I can optimize how VGG can be used!
+Check if eventually decaying the learning rate is really useful or not. --> I will not decay the learning rate as there doesn't seem to be any real consensus
 Look into other types of loss functions that I could use.
 Sort out upsampling in Generator (remove there bilinear and conv layer nonsense) # Sort the conv. rate and runtime trade-off  --> Then only consider this
 Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
@@ -93,6 +101,9 @@ Look into better ways of handling the backward functions (particularly the loss 
 
 
 Other notes
+For Comparision, compare to paired approaches and consider below option
+Look at FID for evaluating the results (Read the Pytorch implementation of CycleGan by Chinese Isola)
+EnlightenGAN used majority of Isola's code as a base/ skeleton!!!
 -Its interesting that GANs only generate square images!
 THe PatchGAN structure is perfect!
 Note! Increasing from EGAN 6 patches to 8 patches, improvement seems likely but increases the runtime by 4-5 seconds... Dont only focus on runtime and neglect quality of results.... I like the results when 8 patches are used despite the longer runtime... Mention this caveat in the report
@@ -143,7 +154,6 @@ is achieved if placed after the activation layer. If possible, try to test both!
 
 
 My Experimentations:
-- To upsample in the generator, try the transpose convolutional layer
 - Check what happens if I remove the resize in the set_input function (single model.py)
 - Its okay if our training results seem small because for the prediction process, the original size is maintained.
 - Try to filter out line 265 in single_model.py. It seems to me that many aspects are redundant.
@@ -158,6 +168,7 @@ My Experimentations:
 - I see that they are using maxpooling, I should see if I can instead use the transpose_conv to down sample(This move is backed by Radford)
 
 Notes for the Report:
+- Talk about using the transpose convolution which gave checkerboard effects, therefore, I'm going to consider some form of interpolation then performing a convolution
 - For the report, I should definitely include a diagram of the architecture since she specifically asked for it ( but it needs to be indistinguishable from Enlighten-GAN!)
 - (Outcome pending on this) In my report, I should show off that I dont need anything too dramatic for shadow detection (like ST-CGAN that dedicates an entire GAN for it)
 - (Outcome pending) Find a way to do erosion and dilation to the attention map. Try doing these operations before adding to tensor but the noise removal will probably be expensive.

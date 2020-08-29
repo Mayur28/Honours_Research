@@ -87,7 +87,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         #after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
         the_grayscale=self.gray_transform(A_img)
         half_GS=the_grayscale-torch.min(the_grayscale)
-        A_gray= 1.0-0.45*(half_GS/torch.max(half_GS))
+        A_gray= 1.0-0.5*(half_GS/torch.max(half_GS))
 
         #r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
         #A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
