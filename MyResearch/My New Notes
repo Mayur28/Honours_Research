@@ -1,23 +1,20 @@
 MAJOR OVERHAUL NEEDED!!!!
 
-Experimenting with how the attention map is attained
-There's seems to be converging much faster than mine
-What seems odd is that they divide there greyscale image by 2... Try with halving mine as well... See if I can bias my approach somehow
-I think that I should stay away from lr=0.0002, seems to be causing the model to collapse( Verify this soon!)
 For any verification, execute "Minor changes to Perfect" from GitHub
 It is now verified that it was the 0.0002 lr that caused the weird effects
 Look into any potential Perceptual Loss enhancements!
-# Check what is the best way to downsample--> EGAN: MaxPool.... I'm following Radford and doing fractionally strided convolution
+
+
 
 To Do Today
+Look into other types of loss functions that I could use.
 Sort out upsampling in Generator ( remove there bilinear and conv layer nonsense)
-
-Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
 Read EGAN paper and fully understand the gaps ( the equations that dont seem to make sense to me))) Particularly the adv loss and relativistic stuff? --> This may be fairly time consuming!
 Fully understand the VGG STUFF
 One blog already verifies that we dont have sigmoid at the end of the discriminator ( it says that we need a linear activation--> There exists a built-in called Linear... What is it's purpose?)
 Using an L2 loss penalizes and forces the synthetic dist to match the actual distribution instead of just hoping that the discriminator classifies correctly. We work with the distance between the actually distribution and our sythetic distribution
 Using the original log loss isn't effective as the discs discriminator is saturating, and since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
+Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
 
 
 LSGAN notes
@@ -57,6 +54,30 @@ Consider using batch_size=8... Dont be premature in the verdict... Read hardt ca
  Check what exactly is going on in backward_G
 Investigate the effect of increasing the number of patches that we extract
 Check if eventually decaying the learning rate is really useful or not.
+- Mask-Shadow GAN uses tanh on the output of the generator. ( But are they using LSGAN -> yes). Try to include in my implementation?
+- Read up on the LSGAN loss! (Read MLM's article on LSGAN
+) Very Important!!!
+- I MUST BLEND WITH THE PyTorch DCGAN EXAMPLE AND CHECK THE OVERLAPS AND DISPARITIES
+- Check what size images we are working with. The paper and dataset reflects 600x400 but the processing seems to account for 320x320
+
+- In the long term, I may need to compile better datasets. I dont think training for the 2 roles simulataneously is a viable solution. FIND A BETTER STRATEGY TO TRAIN FOR THE 2 TASKS
+
+- Try to display the many aspects within the generator when doing a forward pass (what do the many resized attention maps or the latent result look like before any further processing)
+
+
+- Confirm the story of switching the labels in backward_G!
+
+- Look into the main functions (the arch. of the networks as well as how they forward and back propagate)
+- Confirm the switching of labels in the backward_G function
+- It appears that the output is formed by multiplying the latent image with the low-light image. (Verify this!)
+- READ ENLIGHTEN
+-  GET MY FINAL VERSION OF THE CODE READY (WITH ALL THE NECESSARY AMENDMENTS PERFORMED!!!)
+- Check what is going on in backward_G as to how the  loss_G_A is computed (why are they switched?)
+- Where are acknowledging that skip connections are used, but it doesnt seem as if we are actually including any information in the attention modules(<-- what EGAN calls it)
+- Check if I can optimize how VGG can be used!
+- Check what is the purpose of the latent result
+- I dont see where is the vgg forward function called? In the Perceptual loss class, I see that we are using the vgg network but I dont see where we explicitly forward propagate. We dont, but investigate how is a result produced if we do not forward propagate
+- For some reason, we dont ever set the discriminators to trainable? --> Not neccesary as this is the default
 
 
 
@@ -140,32 +161,6 @@ is achieved if placed after the activation layer. If possible, try to test both!
 - In vgg_preprocess, why are the colour channels reversed?
 
 
-To Do List
-- Mask-Shadow GAN uses tanh on the output of the generator. ( But are they using LSGAN -> yes). Try to include in my implementation?
-- Read up on the LSGAN loss! (Read MLM's article on LSGAN
-) Very Important!!!
-- I MUST BLEND WITH THE PyTorch DCGAN EXAMPLE AND CHECK THE OVERLAPS AND DISPARITIES
-- Check what size images we are working with. The paper and dataset reflects 600x400 but the processing seems to account for 320x320
-
-- In the long term, I may need to compile better datasets. I dont think training for the 2 roles simulataneously is a viable solution. FIND A BETTER STRATEGY TO TRAIN FOR THE 2 TASKS
-
-- Try to display the many aspects within the generator when doing a forward pass (what do the many resized attention maps or the latent result look like before any further processing)
-
-
-- Confirm the story of switching the labels in backward_G!
-
-- Look into the main functions (the arch. of the networks as well as how they forward and back propagate)
-- Confirm the switching of labels in the backward_G function
-- It appears that the output is formed by multiplying the latent image with the low-light image. (Verify this!)
-- READ ENLIGHTEN
--  GET MY FINAL VERSION OF THE CODE READY (WITH ALL THE NECESSARY AMENDMENTS PERFORMED!!!)
-- Check what is going on in backward_G as to how the  loss_G_A is computed (why are they switched?)
-- Where are acknowledging that skip connections are used, but it doesnt seem as if we are actually including any information in the attention modules(<-- what EGAN calls it)
-- Check if I can optimize how VGG can be used!
-- Check what is the purpose of the latent result
-- I dont see where is the vgg forward function called? In the Perceptual loss class, I see that we are using the vgg network but I dont see where we explicitly forward propagate. We dont, but investigate how is a result produced if we do not forward propagate
-- For some reason, we dont ever set the discriminators to trainable? --> Not neccesary as this is the default
-
 My Experimentations:
 - To upsample in the generator, try the transpose convolutional layer
 - Check what happens if I remove the resize in the set_input function (single model.py)
@@ -189,3 +184,5 @@ Notes for the Report:
 - In my write-up make sure I mention that Im using LSGAN loss and explain it. In the discriminator, instead of just being right or wrong, it tells how right or wrong we are.
 - Find a way to remove the noise
 - Be absolutely precise when it comes to detail, for example, when discussing the dataset, go into detail of where the images came from, what do they contain, what is it's form(png and size), why did I use it... Were they preprocessed
+Make a note that I made this change : Check what is the best way to downsample--> EGAN: MaxPool.... I'm following Radford and doing fractionally strided convolution ( Give a thorough explain why this is the case)
+- The generator and discriminator are DCGAN's but the grand network is considered as a LSGAN (the name primarily originating from the choice of loss function)
