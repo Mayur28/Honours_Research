@@ -9,16 +9,15 @@ For any verification, execute "Minor changes to Perfect" from GitHub
 It is now verified that it was the 0.0002 lr that caused the weird effects
 Look into any potential Perceptual Loss enhancements!
 
-Question the trade off between qulaity of results and runtime?
-
+Question the trade off between quality of results and runtime?
+Its definitely my updated generator and discriminator thats causing an issue...
 
 
 To Do Today
-Fine tune the attention map
+Change the generator to use skip connections!!! Do Not Lie!!!
+Fine tune the attention map --> Today!
 - Check if I can optimize how VGG can be used!
 Check if eventually decaying the learning rate is really useful or not.
-
-Sort out the get_target tensor story today!!!
 Look into other types of loss functions that I could use.
 Sort out upsampling in Generator (remove there bilinear and conv layer nonsense) # Sort the conv. rate and runtime trade-off  --> Then only consider this
 Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
@@ -32,7 +31,6 @@ Below is an example configuration from MLM: This involves the use of Convolution
 Using an L2 loss penalizes and forces the synthetic dist to match the actual distribution instead of just hoping that the discriminator classifies correctly. We work with the distance between the actually distribution and our sythetic distribution
 Using the original log loss isn't effective as the discs discriminator is saturating, and since the generator is updated on the discriminators performance, G may not have sufficient information to direct itself towards the true data distribution
 
-SPICE EVERYTHING UP, TOO SIMILIAR!!!
  Find other papers as well
  Do with my own understanding!!!
 The least square loss function is the L2 loss functions
@@ -76,8 +74,7 @@ Concrete Investigative list
 Investigate how was the low-light images of egan formed? They seem very artificial... An example being 23_2... The sky cant be that dim... In the paper, that mention the 4 sources (2 normal) and 2 HDR sources... INVESTIGATE THIS THOROUGHLY... could help with quality of performance.
 When writing the report, explain the effect of varying every single parameter individually!
 Experiment the effect when instance normalization is used
-Look into whether the order of training the generator and the discriminator is correct or not
- Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
+ Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary) # This relates to how the pre-trained model was trained
  Go beyond what I wanted and state how exactly do I want to improve this in the long run
  Check if it is absolutely necessary to have skip connections in the Unet generator
  Try to understand how exactly to maneuver the input tensor (particularly in the get_target tensor function)
@@ -92,7 +89,6 @@ Look into better ways of handling the backward functions (particularly the loss 
  Check if vgg_mean is actually useful or not? Seems to have potential?
  Look into how vgg and vgg_loss are different... self.vgg_loss.compute_vgg_loss(self.vgg)... vgg_loss is a class and useful and uses the accepts self.vgg as input ... vgg is only the network, nothing else!
  Why was relu5_1 used for the VGG network?
- Investigate thoroughly how is the forward function of the VGG network being called implicitly. Might be that when called, it calls the other function that is not the __init__ function
 
 
 

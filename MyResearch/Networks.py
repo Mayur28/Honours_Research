@@ -265,46 +265,8 @@ class GANLoss(nn.Module):
         self.Tensor=torch.cuda.FloatTensor
         self.loss=nn.MSELoss()
 
-    # #This function is absolute rubbish! Can be significantly improved!
-    # def get_target_tensor(self,input,target_is_real):#This function basically creates a target label tensor which is used to compute the MSE in __call__.
-    #     target_tensor=None
-    #     if target_is_real:
-    #         target_tensor=Variable(self.Tensor(input.size()).fill_(self.real_label),requires_grad=False)
-    #     else:
-    #         target_tensor=Variable(self.Tensor(input.size()).fill_(self.fake_label),requires_grad=False)
-    #     return target_tensor
-
-
-    #This function is absolute rubbish! Can be significantly improved!
-    def get_target_tensor(self,input,target_is_real):#This function basically creates a target label tensor which is used to compute the MSE in __call__.
-        target_tensor=None
-        if target_is_real:
-            #This is a boolean for whether we need to actually create a new label tensor
-            create_label=((self.real_label_var is None) or (self.real_label_var.numel()!=input.numel()))
-
-            if create_label:
-                real_tensor=self.Tensor(input.size()).fill_(self.real_label)
-                #Check why do we need the variable function
-                self.real_label_var=Variable(real_tensor,requires_grad=False)
-            target_tensor=self.real_label_var
-        else:
-            create_label=((self.fake_label_var is None) or (self.fake_label_var.numel()!=input.numel()))
-            if create_label:
-                fake_tensor=self.Tensor(input.size()).fill_(self.fake_label)
-                #Check why do we need the variable function
-                self.fake_label_var=Variable(fake_tensor,requires_grad=False)
-            target_tensor=self.fake_label_var
-        return target_tensor
-
     def __call__(self,input,target_is_real):
-        target_tensor=self.get_target_tensor(input,target_is_real)
-        print("Diagnostic Information of the target Tensor")
-        print(target_tensor.size())
-        print(target_tensor.is_cuda)
-        """
-        if(target__is_real):
-            target_tensortorch.new_full(input.shape,self.real_label,device)
-        """
+        target_tensor= self.Tensor(input.size()).detach().fill_(float(target_is_real))
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
