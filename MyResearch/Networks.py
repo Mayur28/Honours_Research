@@ -146,9 +146,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.Gen_adv_loss= (self.model_loss(pred_real  - torch.mean(pred_fake), False) + self.model_loss(pred_fake  - torch.mean(pred_real), True)) / 2
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
 
-        accum_gen_loss=0
         # We are definitely switching the label here because the patches are fake but we're setting the 'target_is_real' variable to True. Look into this in accordance with MLM plus others
-
+        accum_gen_loss=0
         pred_fake_patch_list= 0
         #Perform the predictions on the list of patches
         for i in range(self.opt.patchD_3):
@@ -163,12 +162,10 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.total_vgg_loss=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_B,self.real_A)*1.0 # This the vgg loss for the entire images!
 
         patch_loss_vgg=0
-        # This is the vgg loss for the individual patch
-        # Check what its the diff between self.input_patch and self.real_patch? I think input_patch is the low-light patches and real_patches are the normal_light images,thats why I'd be wrong.
         for i in range(self.opt.patchD_3):
             patch_loss_vgg+=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_patch_list[i],self.input_patch_list[i])*1.0
 
-        self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3+1)
+        self.total_vgg_loss+=patch_loss_vgg/float(self.opt.patchD_3)
 
         self.Gen_loss=self.Gen_adv_loss+self.total_vgg_loss # The loss stuff is extremely simple to understand!
         self.Gen_loss.backward()# Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
@@ -301,6 +298,13 @@ class GANLoss(nn.Module):
 
     def __call__(self,input,target_is_real):
         target_tensor=self.get_target_tensor(input,target_is_real)
+        print("Diagnostic Information of the target Tensor")
+        print(target_tensor.size())
+        print(target_tensor.is_cuda)
+        """
+        if(target__is_real):
+            target_tensortorch.new_full(input.shape,self.real_label,device)
+        """
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
@@ -472,13 +476,12 @@ class Unet_generator1(nn.Module):
         gray_4=self.att_downsize(gray_3)
         gray_5=self.att_downsize(gray_4)
 
-
+        #Input Size: torch.Size([16, 3, 320, 320])
         #Gray_2 size: torch.Size([16, 1, 160, 160])
         #Gray_3 size: torch.Size([16, 1, 80, 80])
         #Gray_4 size: torch.Size([16, 1, 40, 40])
         #Gray_5 size: torch.Size([16, 1, 20, 20])
 
-        #Input Size: torch.Size([16, 3, 320, 320])
 
         #Surely below can be automated!!!, do right at the end when I know what I'm doing!
         x=self.norm1_1(self.Relu1_1(self.conv1_1(torch.cat((input,gray),1))))

@@ -85,10 +85,17 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 
         # What is happening is that we are going from a normal 600x400 image ( In the PIL format),
         #after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
-        the_grayscale=self.gray_transform(A_img)
-        half_GS=the_grayscale-torch.min(the_grayscale)
-        the_grayscale= 1.0-0.1*(half_GS/torch.max(half_GS))
-        return {'A': A_img, 'B': B_img, 'A_gray': the_grayscale, 'input_img':input_img}
+        #the_grayscale=self.gray_transform(A_img)
+        #half_GS=the_grayscale-torch.min(the_grayscale)
+        #the_grayscale= 1.0-0.1*(half_GS/torch.max(half_GS))
+        #A_gray=cv2.cvtColor(input_img,0)
+        #A_gray=torch.unsqueeze(A_gray,0)
+        r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
+        A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
+        # Before: 320x320
+        A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with the entire image sqeezed into the 0th dimension/axis
+        # After 1x320x320
+        return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img':input_img}
 
 
 
@@ -97,6 +104,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 
 # Right now, this is directly copied over, NEEDS TO BE REDONE URGENTLY!!!
 # Improve the implementation here( vast amount of rom from improvement here!)
+# Look at VGG preprocess on how to convert from [-1,1] to [0,255]
 def TensorToImage(img_tensor,imtype=np.uint8):
     usable_images=img_tensor[0].cpu().float().numpy()
     usable_images=(np.transpose(usable_images, (1, 2, 0)) + 1) / 2.0 * 255.0
