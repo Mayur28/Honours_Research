@@ -270,239 +270,78 @@ class GANLoss(nn.Module):
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
-class Unet_generator1(nn.Module):
+class Unet_generator1(nn.Module): # Will work with 256x256 input images
     def __init__(self,opt):
         super(Unet_generator1,self).__init__()
 
+        assert(input__nc==output_nc)
+        #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
-        # These will be used to resize the attention map to fit the latent result at each upsampling step
-        # Check what is the best way to downsample
-        self.att_downsize = nn.Conv2d(1, 1, 3, stride=2, padding=1)# This is seperate (this is for the attention maps to fit the size of the filters in each layer) -----> This is for downsampling the attention map. At each step, the size of the attention map is halved.
-
-        # I should create a function to create these modules. Ridiculously shoddy!
-
-        self.conv1_1=nn.Conv2d(4,32,3,padding=1)# 4 because of the the RGB image and the attention map...
-        self.Relu1_1=nn.ReLU(inplace=True) # Inplace is to make the changes directly without producing additional output (it is what it says it is)
-        if(self.opt.norm_type=='Batch'): # I have batch by they have it as use_norm which is the L1 loss weight
-            self.norm1_1=nn.BatchNorm2d(32)
-        else:
-            self.norm1_1=nn.InstanceNorm2d(32)
-        self.conv1_2 = nn.Conv2d(32, 32, 3, padding=1)
-        self.Relu1_2 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='Batch'):
-            self.norm1_2 = nn.BatchNorm2d(32)
-        else:
-            self.norm1_2=nn.InstanceNorm2d(32)
-        self.down_samp1 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
+        ngf=64
+        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_type=opt.norm_type,innermost=True)
+        for i in range(num_downs_ 5):
+            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer)
+        # Gradually decrease the the number of filters from ngf*8 to ngf
+        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,unet_module,norm_layer)
+        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_module,norm_layer)
+        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_module,norm_layer)
+        unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_layer)
+        skipmodule= SkipModule(unet_block,opt)
+        self.model=skipmodule
 
 
-        self.conv2_1=nn.Conv2d(32,64,3,padding=1)
-        self.Relu2_1=nn.ReLU(inplace=True)
-        if(self.opt.norm_type=='Batch'):
-            self.norm2_1=nn.BatchNorm2d(64)
-        else:
-            self.norm2_1=nn.InstanceNorm2d(64)
-
-        self.conv2_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.Relu2_2 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='Batch'):
-            self.norm2_2 = nn.BatchNorm2d(64)
-        else:
-            self.norm2_2=nn.InstanceNorm2d(64)
-        self.down_samp2 =nn.Conv2d(64, 64, 3, stride=2, padding=1)
+        def forward(self,input):
+            return self.model(input)
 
 
-        self.conv3_1=nn.Conv2d(64,128,3,padding=1)
-        self.Relu3_1=nn.ReLU(inplace=True)
-        if(self.opt.norm_type=='Batch'):
-            self.norm3_1=nn.BatchNorm2d(128)
-        else:
-            self.norm3_1=nn.InstanceNorm2d(128)
-        self.conv3_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.Relu3_2 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='Batch'):
-            self.norm3_2 = nn.BatchNorm2d(128)
-        else:
-            self.norm3_2=nn.InstanceNorm2d(128)
-        self.down_samp3 = nn.Conv2d(128, 128, 3, stride=2, padding=1)
+class  UnetSkipConnectionBlock(nn.Module):
+        # Fix the ordering of everything!
+        def __init__(self,outer_nc,inner_nc, submodule=None,outermost=False,innermost=False):
+            super( UnetSkipConnectionBlock,self).__init__()
+            self.outermost=outermost
+
+            downconv= nn.Conv2d(outer_nc,inner_nc,kernel_size=4,stride=2,padding)
+            downrelu=nn.ReLU(True)# Im using Relu only in generator, they use leakyRelu
+            downnorm=nn.BatchNorm2d(inner_nc)
+            uprelu=nn.ReLU(True)
+            upnorm=nn.BatchNorm2d(outer_nc)
+
+            if( outermost): # We dont perform Batch normalization on outer layers(as recommended by Radfors)
+                upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+                down=[downconv]
+                up=[uprelu,upconv,nn.Tanh()]
+                model=down+[submodule]+up
+            elif(innermost):
+                upconv=nn.ConvTranspose2d(inner_nc,outer_nc,kernel_size=4,stride=2,padding=1)
+                down=[downrelu,downconv]
+                up=[uprelu,upconv,upnorm]
+                model=down+up
+
+            else:
+                upconv=nn.ConvTranspose2d(input_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+                down=[downrelu,downconv,downnorm]
+                up = [uprelu,upconv,upnorm]
+
+                model=down+[submodule]+up
+            self.model =nn.Sequential(*model)
+
+        def forward(self,x):
+            if(self.outermost):
+                return self.model(x)
+            else:
+                return torch.cat([self.model(x),x],1)
+
+class SkipModule(nn.Module):
+    def __init__(self,submodule,opt):
+        super(SkipModule,self).__init__()
+        self.submodule=submodule
+        self.opt=opt
+
+    def forward(self,x):
+        latent_self.submodule(x)
+        return self.opt.skip*x+latent, latent
 
 
-        self.conv4_1=nn.Conv2d(128,256,3,padding=1)
-        self.Relu4_1=nn.ReLU(inplace=True)
-        if(opt.norm_type=='Batch'):
-            self.norm4_1=nn.BatchNorm2d(256)
-        else:
-            self.norm4_1=nn.InstanceNorm2d(256)
-        self.conv4_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.Relu4_2 = nn.ReLU(inplace=True)
-        if (opt.norm_type=='Batch'):
-            self.norm4_2 = nn.BatchNorm2d(256)
-        else:
-            self.norm4_2=nn.InstanceNorm2d(256)
-        self.down_samp4 = nn.Conv2d(256, 256, 3, stride=2, padding=1)
-
-
-
-        self.conv5_1=nn.Conv2d(256,512,3,padding=1)
-        self.Relu5_1=nn.ReLU(inplace=True)
-        if(opt.norm_type=='Batch'):
-            self.norm5_1=nn.BatchNorm2d(512)
-        else:
-            self.norm5_1=nn.InstanceNorm2d(512)
-        self.conv5_2 = nn.Conv2d(512, 512, 3, padding=1)
-        self.Relu5_2 = nn.ReLU(inplace=True)
-        if (opt.norm_type=='Batch'):
-            self.norm5_2 = nn.BatchNorm2d(512)
-        else:
-            self.norm5_2=nn.InstanceNorm2d(512)
-
-
-        #The bottleneck has been reached, we now enter the decoder. We need to now upsample to produce the sample.
-        # self.deconv5 = nn.ConvTranspose2d(512, 256, 2, stride=2)# IT SEEMS THAT THEY ALREADY ATTEMPTED WHAT I WANTED TO DO( USE THE TRANSPOSE CONV LAYER TO UPSAMPLE)
-        self.deconv5 = nn.Conv2d(512, 256, 3, padding=1) # Try to get an intuition of how the no. of filters,kernel_size and strides are configured to achieve different characteristics
-        self.conv6_1 = nn.Conv2d(512, 256, 3, padding=1) # In the forward pass, this will be used with the bilinear parameter
-        self.Relu6_1 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='batch'):
-            self.norm6_1 =  nn.BatchNorm2d(256)
-        else:
-            self.norm6_1= nn.InstanceNorm2d(256)
-        self.conv6_2 = nn.Conv2d(256, 256, 3, padding=1)
-        self.Relu6_2 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='batch'):
-            self.norm6_2 =  nn.BatchNorm2d(256)
-        else:
-            self.norm6_2 = nn.InstanceNorm2d(256)
-
-        self.deconv6=nn.Conv2d(256,128,3,padding=1)
-        self.conv7_1=nn.Conv2d(256,128,3,padding=1)
-        self.Relu7_1=nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='batch'):
-            self.norm7_1 =  nn.BatchNorm2d(128)
-        else:
-            self.norm7_1= nn.InstanceNorm2d(128)
-        self.conv7_2 = nn.Conv2d(128, 128, 3, padding=1)
-        self.Relu7_2 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='batch'):
-            self.norm7_2 =  nn.BatchNorm2d(128)
-        else:
-            self.norm7_2=nn.InstanceNorm2d(128)
-
-
-
-        self.deconv7=nn.Conv2d(128,64,3,padding=1)
-        self.conv8_1=nn.Conv2d(128,64,3,padding=1)
-        self.Relu8_1=nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='batch'):
-            self.norm8_1 =  nn.BatchNorm2d(64)
-        else:
-            self.norm8_1= nn.InstanceNorm2d(64)
-        self.conv8_2 = nn.Conv2d(64, 64, 3, padding=1)
-        self.Relu8_2 = nn.ReLU(inplace=True)
-        if (self.opt.norm_type=='batch'):
-            self.norm8_2 =  nn.BatchNorm2d(64)
-        else:
-            self.norm8_2=nn.InstanceNorm2d(64)
-
-
-        self.deconv8=nn.Conv2d(64,32,3,padding=1)
-        self.conv9_1=nn.Conv2d(64,32,3,padding=1)
-        self.Relu9_1=nn.ReLU(inplace=True)
-        if(self.opt.norm_type=='batch'):
-            self.norm9_1=nn.BatchNorm2d(32)
-        else:
-            self.norm9_1=nn.InstanceNorm2d(32)
-        self.conv9_2=nn.Conv2d(32,32,3,padding=1)
-        self.Relu9_2=nn.ReLU(inplace=True)
-
-        self.conv10=nn.Conv2d(32,3,1) # This apparently has something to do with producing the latent space.
-        # Look into this tanh function to ensure that we are withing [-1,1]
-        self.tanh= nn.Tanh()# In the provided training conf., tanh is not used. But how do we ensure that the output is within an acceptable range?
-
-    def forward(self,input,gray): # We forward propagate a batch at a time!
-        # flag=0
-        # if input.size()[3] >2200:# This seems ridiculous! Test performance when this is removed
-        #     avg=nn.avgPool2d(2)
-        #     input=avg(input)
-        #     gray=avg(gray)
-        #     flag=1#--> Indicates that at the end, we need to upsample
-            # Before Performing a forward pass on the tensor, we first pad the tensor containing the real (low-light) images
-			#If the dimensions of the images are perfectly divisible by 16, we dont pad.
-			# Otherwise, we pad the dimensions that are skew by the amount such that the dim. of the new padded version is divisible by 16.
-			#The pad_tensor function performs the padding (if necessary) and returns how much padding was applied to each side which makes it easier when removing the padding later.
-
-
-        # First downsample the attention map for all stages
-
-        gray_2=self.att_downsize(gray)
-        gray_3=self.att_downsize(gray_2)
-        gray_4=self.att_downsize(gray_3)
-        gray_5=self.att_downsize(gray_4)
-
-        #Input Size: torch.Size([16, 3, 320, 320])
-        #Gray_2 size: torch.Size([16, 1, 160, 160])
-        #Gray_3 size: torch.Size([16, 1, 80, 80])
-        #Gray_4 size: torch.Size([16, 1, 40, 40])
-        #Gray_5 size: torch.Size([16, 1, 20, 20])
-
-
-        #Surely below can be automated!!!, do right at the end when I know what I'm doing!
-        x=self.norm1_1(self.Relu1_1(self.conv1_1(torch.cat((input,gray),1))))
-
-        conv1=self.norm1_2(self.Relu1_2(self.conv1_2(x)))
-        x=self.down_samp1(conv1)
-
-        x=self.norm2_1(self.Relu2_1(self.conv2_1(x)))
-        conv2=self.norm2_2(self.Relu2_2(self.conv2_2(x)))
-        x=self.down_samp2(conv2)
-
-        x=self.norm3_1(self.Relu3_1(self.conv3_1(x)))
-        conv3=self.norm3_2(self.Relu3_2(self.conv3_2(x)))
-        x=self.down_samp3(conv3)
-
-        x=self.norm4_1(self.Relu4_1(self.conv4_1(x)))
-        conv4=self.norm4_2(self.Relu4_2(self.conv4_2(x)))
-        x=self.down_samp4(conv4)
-
-        x=self.norm5_1(self.Relu5_1(self.conv5_1(x)))
-        x=x*gray_5
-        conv5=self.norm5_2(self.Relu5_2(self.conv5_2(x)))
-
-        #Bottleneck has been reached( I think, but then, why is the att map already being multiplied?) - start upsampling
-        # Experiment here to see if bilinear upsampling really is this best option.
-
-        conv5=F.upsample(conv5,scale_factor=2,mode='bilinear')
-        conv4=conv4*gray_4
-        up6=torch.cat([self.deconv5(conv5),conv4],1)
-        x=self.norm6_1(self.Relu6_1(self.conv6_1(up6)))
-        conv6=self.norm6_2(self.Relu6_2(self.conv6_2(x)))
-
-        conv6=F.upsample(conv6,scale_factor=2,mode='bilinear')
-        conv3=conv3*gray_3
-        up7=torch.cat([self.deconv6(conv6),conv3],1)
-        x=self.norm7_1(self.Relu7_1(self.conv7_1(up7)))
-        conv7=self.norm7_2(self.Relu7_2(self.conv7_2(x)))
-
-        conv7=F.upsample(conv7,scale_factor=2,mode='bilinear')
-        conv2=conv2*gray_2
-        up8=torch.cat([self.deconv7(conv7),conv2],1)
-        x=self.norm8_1(self.Relu8_1(self.conv8_1(up8)))
-        conv8=self.norm8_2(self.Relu8_2(self.conv8_2(x)))
-
-        conv8=F.upsample(conv8,scale_factor=2,mode='bilinear')
-        conv1=conv1*gray
-        up9=torch.cat([self.deconv8(conv8),conv1],1)
-        x=self.norm9_1(self.Relu9_1(self.conv9_1(up9)))
-        conv9=self.Relu9_2(self.conv9_2(x))
-
-        latent = self.conv10(conv9)# What is this for?
-        #Latent Size = torch.Size([16, 3, 320, 320])
-
-        latent = latent*gray
-
-
-        latent = self.tanh(latent)
-        output = latent + input*float(self.opt.skip)# This is a breakthrough! The latent result is added to the low-light image to form the output.
-        return output, latent # Want to see what is this latent!
 
 
 class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is absolutely "textbook stuff"
@@ -517,7 +356,7 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
         # Needs to be treated seperately (as advised by Radford - we dont apply on output of generator and input of discriminator)
         sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2),nn.LeakyReLU(0.2,True)]
         # The rubbish below can be modified!
-        #Filter out this rubbish ( Warning 1 - its the simple input output procedure)
+        # Filter out this rubbish ( Warning 1 - its the simple input output procedure)
         # Output collapses from 512 - 1... Check what does the 1 activation map represent
         # Needs to be completely restructured according to Radford
         # Look at flagship papers, as well as morphing EGAN's alternate implementations and get ideas from other papers
