@@ -277,30 +277,31 @@ class Unet_generator1(nn.Module): # Will work with 256x256 input images
         #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
         ngf=64
-        norm_type=opt.norm_type
+        norm_type=1
         unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_layer=opt.norm_type,innermost=True)
-        for i in range(num_downs_ 5):
+        for i in range(num_downs - 5):
             unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer=norm_type)
         # Gradually decrease the the number of filters from ngf*8 to ngf
-        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,unet_module,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_module,norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_module,norm_type)
-        unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,unet_block,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_block,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_block,norm_layer=norm_type)
+        unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_layer=norm_type)
         skipmodule= SkipModule(unet_block,opt)
         self.model=skipmodule
 
 
-        def forward(self,input):
-            return self.model(input)
+    def forward(self,input,gray):
+        Concatenated=torch.cat((input,gray),1)
+        return self.model(Concatenated)
 
 
 class  UnetSkipConnectionBlock(nn.Module):
         # Fix the ordering of everything!
-        def __init__(self,outer_nc,inner_nc, submodule=None,outermost=False,innermost=False):
+        def __init__(self,outer_nc,inner_nc,submodule=None,outermost=False,innermost=False,norm_layer=None):
             super( UnetSkipConnectionBlock,self).__init__()
             self.outermost=outermost
 
-            downconv= nn.Conv2d(outer_nc,inner_nc,kernel_size=4,stride=2,padding)
+            downconv= nn.Conv2d(outer_nc,inner_nc,kernel_size=4,stride=2,padding=1)
             downrelu=nn.ReLU(True)# Im using Relu only in generator, they use leakyRelu
             downnorm=nn.BatchNorm2d(inner_nc)
             uprelu=nn.ReLU(True)
@@ -318,7 +319,7 @@ class  UnetSkipConnectionBlock(nn.Module):
                 model=down+up
 
             else:
-                upconv=nn.ConvTranspose2d(input_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+                upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
                 down=[downrelu,downconv,downnorm]
                 up = [uprelu,upconv,upnorm]
 

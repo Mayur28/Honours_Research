@@ -6,6 +6,7 @@ For any verification, execute "Minor changes to Perfect" from GitHub
 
 
 Doubts
+Point out the lies in EnlightenGAN's paper
 My approach has potential but I should seriously consider the proper Unet network...  Ask Hairong about the Unet story before proceeding
 Optimized timing: 80-82 secs, old version (that converges and mirrors their approach: 76 secs)
 Question the trade off between quality of results and runtime?
