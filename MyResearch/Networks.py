@@ -239,7 +239,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
 def make_G(opt):
-    generator=Unet_generator1(opt)
+    generator=Unet_generator1( 8,opt)
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -271,21 +271,21 @@ class GANLoss(nn.Module):
 
 
 class Unet_generator1(nn.Module): # Will work with 256x256 input images
-    def __init__(self,opt):
+    def __init__(self,num_downs,opt):
         super(Unet_generator1,self).__init__()
 
-        assert(input__nc==output_nc)
         #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
         ngf=64
-        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_type=opt.norm_type,innermost=True)
+        norm_type=opt.norm_type
+        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_layer=opt.norm_type,innermost=True)
         for i in range(num_downs_ 5):
-            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer)
+            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer=norm_type)
         # Gradually decrease the the number of filters from ngf*8 to ngf
-        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,unet_module,norm_layer)
-        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_module,norm_layer)
-        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_module,norm_layer)
-        unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_layer)
+        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,unet_module,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_module,norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_module,norm_type)
+        unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_type)
         skipmodule= SkipModule(unet_block,opt)
         self.model=skipmodule
 
