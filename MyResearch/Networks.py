@@ -109,7 +109,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         #Make a prediction!
         # What is the latent used for?
         self.fake_B= self.Gen.forward(self.real_img,self.real_A_gray)# We forward prop. a batch at a time, not individual images in the batch!
-
         # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
         w=self.real_A.size(3)
         h=self.real_B.size(2)
@@ -118,7 +117,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # Check if there is really a need for these seperate patches
         # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
 
-        #print(self.fake_patch.size()) [16,3,32,32]
 
         self.fake_patch_list=[]
         self.real_patch_list=[]
@@ -220,11 +218,11 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # Experiment alot to see what is this latent stuff and what is it used for
         # What does the .data do?
         # In the final version, these can be commented out, we dont want to unnecesary be converting stuff
-        latent_real_A=TensorToImage(self.latent_real_A.data)
-        latent_show=LatentToImage(self.latent_real_A.data)
+        #latent_real_A=TensorToImage(self.latent_real_A.data)
+        #latent_show=LatentToImage(self.latent_real_A.data)
 
 
-        self_attention= AttentionToImage(self.real_A_gray.data)
+        self_attention= TensorToImage(self.real_A_gray.data)
         return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
     def save_network(self,network,label,epoch):
@@ -280,7 +278,7 @@ class Unet_generator1(nn.Module): # Will work with 256x256 input images
         #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
         ngf=64
-        norm_layer='batch'
+        norm_type='batch'
         unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_layer=norm_type,innermost=True)
         for i in range(num_downs - 5):
             unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer=norm_type)
@@ -294,9 +292,7 @@ class Unet_generator1(nn.Module): # Will work with 256x256 input images
 
 
     def forward(self,input,gray):
-        modified_att=self.model(gray)
-        the_answer=input+(gray*modified_att)
-        return the_answer
+        return self.model(input,gray) # This will do the propagation of the full network
 
 class SkipModule(nn.Module):
     def __init__(self,submodule,opt):
@@ -304,52 +300,50 @@ class SkipModule(nn.Module):
         self.submodule=submodule
         self.opt=opt
 
-    def forward(self,x):
-        latent_self.submodule(x)
+    def forward(self,x,gray):
+        latent=self.submodule(x,gray) # This just calls the propagation of the full network and stores the result
         return self.opt.skip*x+latent
 
 
 
 class  UnetSkipConnectionBlock(nn.Module):
-        # Fix the ordering of everything!
-        def __init__(self,outer_nc,inner_nc,submodule=None,outermost=False,innermost=False,norm_layer=None):
-            super( UnetSkipConnectionBlock,self).__init__()
-            self.outermost=outermost
+    # Fix the ordering of everything!
+    def __init__(self,outer_nc,inner_nc,submodule=None,outermost=False,innermost=False,norm_layer=None,gray_image=None):
+        super( UnetSkipConnectionBlock,self).__init__()
+        self.outermost=outermost
 
-            downconv= nn.Conv2d(outer_nc,inner_nc,kernel_size=4,stride=2,padding=1)
-            downrelu=nn.ReLU(True)# Im using Relu only in generator, they use leakyRelu
-            downnorm=nn.BatchNorm2d(inner_nc)
-            uprelu=nn.ReLU(True)
-            upnorm=nn.BatchNorm2d(outer_nc)
+        downconv= nn.Conv2d(outer_nc,inner_nc,kernel_size=4,stride=2,padding=1)
+        downrelu=nn.ReLU(True)# Im using Relu only in generator, they use leakyRelu
+        downnorm=nn.BatchNorm2d(inner_nc)
+        uprelu=nn.ReLU(True)
+        upnorm=nn.BatchNorm2d(outer_nc)
 
-            if( outermost): # We dont perform Batch normalization on outer layers(as recommended by Radfors)
-                upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
-                down=[downconv]
-                up=[uprelu,upconv,nn.Tanh()]
-                model=down+[submodule]+up
-            elif(innermost):
-                upconv=nn.ConvTranspose2d(inner_nc,outer_nc,kernel_size=4,stride=2,padding=1)
-                down=[downrelu,downconv]
-                up=[uprelu,upconv,upnorm]
-                model=down+up
+        if( outermost): # We dont perform Batch normalization on outer layers(as recommended by Radfors)
+            upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+            down=[downconv]
+            up=[uprelu,upconv,nn.Tanh()]
+            model=down+[submodule]+up
+        elif(innermost):
+            upconv=nn.ConvTranspose2d(inner_nc,outer_nc,kernel_size=4,stride=2,padding=1)
+            down=[downrelu,downconv]
+            up=[uprelu,upconv,upnorm]
+            model=down+up
 
-            else:
-                upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
-                down=[downrelu,downconv,downnorm]
-                up = [uprelu,upconv,upnorm]
+        else:
+            upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+            down=[downrelu,downconv,downnorm]
+            up = [uprelu,upconv,upnorm]
 
-                model=down+[submodule]+up
-            self.model =nn.Sequential(*model)
+            model=down+[submodule]+up
+        self.model =nn.Sequential(*model)
 
-        def forward(self, x):
-            if self.outermost:
-                return self.model(x)
-            else:
-                the ans=self.model(x)
-                print("The size")
-                print(the_ans.size())
-                print(the_ans[2])
-                return torch.cat([the_ans, x], 1)
+    def forward(self,input): # This the propagating through one block
+        #normal=input[0]
+        #gray=input[1]
+        if self.outermost:
+            return self.model(normal)
+        else:
+            return torch.cat([self.model(normal), gray], 1)
 
 
 
