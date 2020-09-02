@@ -32,13 +32,9 @@ def config_transforms(opt):
     transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
     return transforms.Compose(trans_list)
 
-def gray_transform():
-    trans_list=[]
-    trans_list+=[transforms.ToPILImage(),
-    transforms.Grayscale(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5),(0.5))]
-    return transforms.Compose(trans_list)
+def the_gray_transform():
+    trans=[transforms.ToPILImage(),transforms.Grayscale(3),transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))]
+    return transforms.Compose(trans)
 
 class DataLoader:
     def __init__(self,opt):
@@ -71,7 +67,7 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)
-        self.gray_transform=gray_transform()
+        self.gray_transform=the_gray_transform()
 
     def __getitem__(self,index):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
@@ -85,16 +81,15 @@ class FullDataset(data.Dataset):# I've inherited what I had to
 
         # What is happening is that we are going from a normal 600x400 image ( In the PIL format),
         #after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
-        the_grayscale=self.gray_transform(A_img)
-        half_GS=the_grayscale-torch.min(the_grayscale)
-        A_gray= 1.0-0.5*(half_GS/torch.max(half_GS))
+        the_gray=self.gray_transform(A_img)
+        my_A_gray= 1. - 0.5*the_gray
 
         #r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
         #A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
         # Before: 320x320
         #A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with the entire image sqeezed into the 0th dimension/axis
         # After 1x320x320
-        return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img':input_img}
+        return {'A': A_img, 'B': B_img, 'A_gray': my_A_gray, 'input_img':input_img}
 
 
 

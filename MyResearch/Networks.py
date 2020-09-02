@@ -21,6 +21,9 @@ def weights_init(model): # This is optimized!!!
         torch.nn.init.normal_(model.weight.data,1.0,0.02)
         torch.nn.init.constant_(model.bias.data,0.0)
 
+
+
+
 class The_Model: # This is the grand model that encompasses everything ( the generator, both discriminators and the VGG network)
     def __init__(self,opt):
 
@@ -105,7 +108,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         #Make a prediction!
         # What is the latent used for?
-        self.fake_B,self.latent_real_A= self.Gen.forward(self.real_img,self.real_A_gray)# We forward prop. a batch at a time, not individual images in the batch!
+        self.fake_B= self.Gen.forward(self.real_img,self.real_A_gray)# We forward prop. a batch at a time, not individual images in the batch!
 
         # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
         w=self.real_A.size(3)
@@ -277,8 +280,8 @@ class Unet_generator1(nn.Module): # Will work with 256x256 input images
         #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
         ngf=64
-        norm_type=1
-        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_layer=opt.norm_type,innermost=True)
+        norm_layer='batch'
+        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_layer=norm_type,innermost=True)
         for i in range(num_downs - 5):
             unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer=norm_type)
         # Gradually decrease the the number of filters from ngf*8 to ngf
@@ -286,13 +289,25 @@ class Unet_generator1(nn.Module): # Will work with 256x256 input images
         unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_block,norm_layer=norm_type)
         unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_block,norm_layer=norm_type)
         unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_layer=norm_type)
-        skipmodule= SkipModule(unet_block,opt)
+        skipmodule= SkipModule(unet_block,opt)# unet_block here represents the entire network
         self.model=skipmodule
 
 
     def forward(self,input,gray):
-        Concatenated=torch.cat((input,gray),1)
-        return self.model(Concatenated)
+        modified_att=self.model(gray)
+        the_answer=input+(gray*modified_att)
+        return the_answer
+
+class SkipModule(nn.Module):
+    def __init__(self,submodule,opt):
+        super(SkipModule,self).__init__()
+        self.submodule=submodule
+        self.opt=opt
+
+    def forward(self,x):
+        latent_self.submodule(x)
+        return self.opt.skip*x+latent
+
 
 
 class  UnetSkipConnectionBlock(nn.Module):
@@ -326,21 +341,16 @@ class  UnetSkipConnectionBlock(nn.Module):
                 model=down+[submodule]+up
             self.model =nn.Sequential(*model)
 
-        def forward(self,x):
-            if(self.outermost):
+        def forward(self, x):
+            if self.outermost:
                 return self.model(x)
             else:
-                return torch.cat([self.model(x),x],1)
+                the ans=self.model(x)
+                print("The size")
+                print(the_ans.size())
+                print(the_ans[2])
+                return torch.cat([the_ans, x], 1)
 
-class SkipModule(nn.Module):
-    def __init__(self,submodule,opt):
-        super(SkipModule,self).__init__()
-        self.submodule=submodule
-        self.opt=opt
-
-    def forward(self,x):
-        latent_self.submodule(x)
-        return self.opt.skip*x+latent, latent
 
 
 
