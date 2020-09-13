@@ -6,8 +6,8 @@ import time
 import os
 
 
-def display_current_results(images,epoch):
-    for label,image in images.items():
+def display_current_results(images,epoch): # Perfect
+    for label,image in images.items():# .items() extractes the "packages" from the dictionary
         img_path=os.path.join(opt.img_dir,'epoch%.3d_%s.png'%(epoch,label))
         image_pil=Image.fromarray(image)
         image_pil.save(img_path)
@@ -24,7 +24,7 @@ def print_errors(epoch,i,errors,t):
 opt=SetupTraining().process()
 data_loader=DataLoader(opt)
 dataset=data_loader.load()
-print("Number of training Images: %d"% len(data_loader))
+print("Number of training images: %d"% len(data_loader))
 the_model=Networks.The_Model(opt)
 
 total_steps=0
@@ -38,7 +38,7 @@ for epoch in range(1,opt.niter+opt.niter_decay+1):
         total_steps+=opt.batch_size
         epoch_iter=total_steps-len(data_loader)*(epoch-1)
         #Remember at this stage, data is the batch 'dataset' in dictionary format. It slots the data into the correct variables self.inputA,etc to easily perform propagation operations
-        the_model.perform_update(data)
+        the_model.perform_update(data) # Perfect
 
         if(total_steps% opt.display_freq==0):
             display_current_results(the_model.for_displaying_images(),epoch)

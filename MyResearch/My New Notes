@@ -20,6 +20,13 @@ Also explain the trajectory, how if first ended up with the UNet_resize_conv and
 When writing the paper, revise again the theory behind an LSGAN (she obviously doesn't know what it is--> Change that!)
 Start looking inti setting up the infastructure for the testing environment
 Look into better ways of saving the model or fix the current version
+Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level!
+Dont just carry on peeling away, there needs to be substance that still remains! --> Gordon Murray!
+Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
+#If I do get the speed, make sure I compare the size of my network to Official EGAN!
+Fix the 'ToImage' functions (right now, they are directly copied over)
+Check again if I should decay the learning rate? Wahat are others doing?--> Check isola and  others MaskShadowGAN
+What does .data do?
 
 
 

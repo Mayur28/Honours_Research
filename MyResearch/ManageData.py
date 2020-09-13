@@ -47,7 +47,7 @@ class DataLoader:
         return len(self.dataset)
 
 
-class FullDataset(data.Dataset):# I've inherited what I had to
+class FullDataset(data.Dataset):
     # This class definitely needs to overwrite __len__ and  __getitem__
     def __init__(self,opt):
         super(FullDataset, self).__init__()
@@ -70,22 +70,16 @@ class FullDataset(data.Dataset):# I've inherited what I had to
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]
 
-        A_img=self.transform(A_img)#This is where we actually perform the transformation
+        A_img=self.transform(A_img)#This is where we actually perform the transformation. These are now tensors that are normalized
         B_img=self.transform(B_img)
 
 
         input_img=A_img
 
-        # What is happening is that we are going from a normal 600x400 image ( In the PIL format),
+        # We are going from a normal 600x400 image ( In the PIL format),
         #after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
         the_gray=self.gray_transform(A_img)
         my_A_gray= 1. - 0.5*the_gray
-
-        #r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
-        #A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. #Verified: The weird numbers are for going from RGB to grayscale
-        # Before: 320x320
-        #A_gray = torch.unsqueeze(A_gray, 0)#Returns a new tensor with the entire image sqeezed into the 0th dimension/axis
-        # After 1x320x320
         return {'A': A_img, 'B': B_img, 'A_gray': my_A_gray, 'input_img':input_img}
 
 
@@ -100,19 +94,4 @@ def TensorToImage(img_tensor,imtype=np.uint8):
     usable_images=img_tensor[0].cpu().float().numpy()
     usable_images=(np.transpose(usable_images, (1, 2, 0)) + 1) / 2.0 * 255.0
     usable_images=np.clip(usable_images,0,255)
-    return usable_images.astype(imtype)
-
-# Find out exactly what is going on here( detaching and manipulating???)
-def AttentionToImage(img_tensor,imtype=np.uint8):
-    tensor=img_tensor[0]
-    tensor=torch.cat((tensor, tensor, tensor), 0)
-    usable_images=tensor.cpu().float().numpy()
-    usable_images = (np.transpose(usable_images, (1, 2, 0))) * 255.0
-    usable_images = usable_images/(usable_images.max()/255.0)
-    return usable_images.astype(imtype)
-
-def LatentToImage(img_tensor,imtype=np.uint8):
-    usable_images = img_tensor[0].cpu().float().numpy()
-    usable_images = (np.transpose(usable_images, (1, 2, 0))) * 255.0
-    usable_images = np.clip(usable_images,0, 255)
     return usable_images.astype(imtype)

@@ -107,7 +107,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
                 self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
 
 
-
+    #Perfect
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
     #This was directly copied over because the the stuff towards the bottom seemed necessary
@@ -256,25 +256,19 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         vgg=self.total_vgg_loss.item()/1.0
         return OrderedDict([('Gen',Gen),('G_Disc',Global_disc),('L_Disc',Local_disc),('vgg',vgg)])
 
+    #Perfect
     def for_displaying_images(self):# Since self.realA_ was declared as a Variable, .data extracts the tensor of the variable.
         real_A=TensorToImage(self.real_A.data)# The low-light image (which is also our input image)
         fake_B=TensorToImage(self.fake_B.data)# Our produced result
-
-        # Experiment alot to see what is this latent stuff and what is it used for
         # What does the .data do?
-        # In the final version, these can be commented out, we dont want to unnecesary be converting stuff
-        #latent_real_A=TensorToImage(self.latent_real_A.data)
-        #latent_show=LatentToImage(self.latent_real_A.data)
-
-
         self_attention= TensorToImage(self.real_A_gray.data)
         return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
-    def save_network(self,network,label,epoch):
-        save_name='%s_net_%s.pth' %(epoch,label)
-        save_path=os.path.join(self.opt.save_dir,save_name)
-        torch.save(network.cpu().state_dict(),save_path)
-        network.cuda(device=self.opt.gpu_ids[0])
+    def save_network(self, network, network_label, epoch_label):
+        save_filename = '%s_net_%s.pth' % (epoch_label, network_label)
+        save_path = os.path.join(self.save_dir, save_filename)
+        torch.save(network.cpu().state_dict(), save_path)
+        network.cuda(device=gpu_ids[0])
 
 
     def save_model(self,label):
