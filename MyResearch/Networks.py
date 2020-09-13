@@ -6,6 +6,8 @@ from torch.autograd import Variable
 from ManageData import TensorToImage, LatentToImage, AttentionToImage
 import os
 from collections import OrderedDict
+import functools
+
 
 
 # Check what would be the story when testing? Would the networks below be created( sound silly but isnt!)
@@ -283,7 +285,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
 def make_G(opt):
-    generator=Unet_generator1(opt)
+    generator=Unet_Generator(opt) # The get_norm_layer stuff gets adding here
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -326,9 +328,9 @@ def get_norm_layer(norm_type='instance'): # Optimize the position and the functi
     return norm_layer
 
 
-class Unet_generator1(nn.Module): # Will work with 256x256 input images
+class Unet_Generator(nn.Module): # Will work with 256x256 input images
     def __init__(self,opt):
-        super(Unet_generator1,self).__init__()
+        super(Unet_Generator,self).__init__()
         num_downs= opt.num_downs
         #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
@@ -336,12 +338,12 @@ class Unet_generator1(nn.Module): # Will work with 256x256 input images
         norm_type=get_norm_layer(opt.norm_type) # Look into why are we working with functional partial stuff???
         unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,norm_layer=norm_type,innermost=True) # Innermost
         for i in range(num_downs - 5):
-            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,unet_block,norm_layer=norm_type)
+            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,submodule=unet_block,norm_layer=norm_type)
         # Gradually decrease the the number of filters from ngf*8 to ngf
-        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,,input_nc=None,unet_block,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,input_nc=None,unet_block,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,input_nc=None,unet_block,norm_layer=norm_type)
-        unet_block= UnetSkipConnectionBlock(3,ngf,input_nc=3, unet_block,outermost=True,norm_layer=norm_type) # The outer layer sandwiches the entire network
+        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,input_nc=None,submodule=unet_block,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,input_nc=None,submodule=unet_block,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,input_nc=None,submodule=unet_block,norm_layer=norm_type)
+        unet_block= UnetSkipConnectionBlock(3,ngf,input_nc=3, submodule=unet_block,outermost=True,norm_layer=norm_type) # The outer layer sandwiches the entire network
         self.model=unet_block
 
 
@@ -371,13 +373,6 @@ class MinimalUnet(nn.Module):
         else: # If it is the inner-most (this would be the base case of the recursion)
             x_up = self.down(x)
 
-        # x_up isn't anything more than what we're going to upsample
-        # print("Before manipulation")
-        # print(x_up.size())
-        # print("X size")
-        # print(x.size())
-        # print("Self size")
-        # print((self.up(x_up).size()))
 
 
         if self.withoutskip: # No skip connections are used for the outer layer
@@ -400,6 +395,7 @@ class  UnetSkipConnectionBlock(nn.Module): # Thos can be optimized!!!
             use_bias = norm_layer == nn.InstanceNorm2d
 
         downconv= nn.Conv2d(input_nc, inner_nc,kernel_size=4,stride=2,padding=1,bias=use_bias)
+        downnorm = norm_layer(inner_nc)
         downrelu=nn.LeakyReLU(0.2,True)# Experiment with this and normal Relu
         uprelu=nn.ReLU(True)# What the hell???
         upnorm=norm_layer(outer_nc)
