@@ -2,18 +2,21 @@ MAJOR OVERHAUL NEEDED!!!!
 
 I'm now starting a THOROUGH POLISH!!!!
 ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
-Number 1 priority: In my version, there's still a colour bias being added for some reason... Could be cause by the difference in learning rate... This is not the cause... I can only now recall the Tanh? Everything else is the same... I am now training for longer
+- Number 1 priority: In my version, there's still a colour bias being added for some reason... Could be cause by the difference in learning rate... This is not the cause... I can only now recall the Tanh? Everything else is the same... I am now training for longer
       There's definitely an issue
-Look into what exactly 'get_norm_layer' does... It seems very nifty - we can initialize norm layers without having to specify the number of filters
-Optimize the padding functions
+- Look into what exactly 'get_norm_layer' does... It seems very nifty - we can initialize norm layers without having to specify the number of filters
+- Optimize the padding functions
 - Check if additional data augmentation is necessary?
+- Obtain my final version of the discriminator (I want normalization!)
+- Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
+
+
+- Check if it is always the case that we set affine to False for InstanceNorm2d?
 Investigate the effect of decreasing the batch size
-# Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
 #(Change the 'help' eventually!) in Setup Training
 # vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
 Note that the default that they set uses Instance normalization in the generator!!! --> This has been verified
 ToDo: Try with batch normalization
-Sort out the discriminator's normalization as well
 Experiment with Normal Relu and Leaky Relu in the generator?
 # For vgg_choose, check what was the purpose of having so many different options.
 Check what exactly is going on for the downsampling
@@ -34,21 +37,16 @@ What does .data do?
 Look into how Tensor and Variable works!
 Check other possible configurations of my network
 Try to get bilinear to work (if possible)
+Extract alot of variation from the VGG network
+If possible look into variation in the Perceptual Loss
+Look into what can be done to reduce noise
 
-
-
-Revert notes
-Compare between "Remove individual patch" and "pinned memory"... Only the network.py is different ( Where I tried to optimize the generator and discriminator)
-For any verification, execute "Minor changes to Perfect" from GitHub
 
 
 Doubts
 Point out the lies in EnlightenGAN's paper
-My approach has potential but I should seriously consider the proper Unet network...  Ask Hairong about the Unet story before proceeding
 Optimized timing: 80-82 secs, old version (that converges and mirrors their approach: 76 secs)
-Question the trade off between quality of results and runtime?
-Ask Hairong about the Unet story before proceeding
-Recent analysis has shown that there is a direct link between how fast models learn and their generalization performance (Hardt et al., 2015).
+
 
 
 
@@ -56,46 +54,24 @@ Recent analysis has shown that there is a direct link between how fast models le
 Notes
 It is now verified that it was the 0.0002 lr that caused the weird effects
 Look into any potential Perceptual Loss enhancements!
-Its unable to handle backlit images ( it adds an un-natural tint to the image) ( Using old generator arch.)
 
 
 Today's To Do list
-HYPERPARAMETER TUNING CANNOT BE THE ONLY THING THAT I AM DOING DIFFERENTLY TO EGAN!
-- Change the generator and evaluate
-- Adjust the crop size to work with the new generator
-- I should work towards improving the colour!--> This should be an after thought after the generator has been redesigned
 - Go with the bilinear upsampling approach (as I currently am) but experiment with this! --> Check if this can be blended in with the new Unet generator
 - Check if I can optimize how VGG can be used!
-- Investigate the effect of increasing the number of patches --> Look into this only once Hairong answers my question
-- Experiment the effect when instance normalization is used
-- Try to find a way to plot the loss after every xxx epochs ( Try to link it using tensorboard and try a dummy example on Colab before commiting)
-- Look into the forward and backward functions once I change the generator and discriminator (There shouldnt be a problem)--> - The handling of the backward functions for the discriminator can be significantly improved!
 
 
 
 To Do
 - Check how can I maneuver the dataset to get the most out of it? In terms of pre-processing, size, etc?
-- They took the generator and the discriminator directly from Isola, Check if my addition of Batch Normalization to the discriminator is feasible or not? Ha!!! The new chinese has Batch Normalization!
-- Add in all the small haptics in the architectures that will make a world of differences
-- Look into what image scaling these people use for upsampling: https://arxiv.org/pdf/1501.00092.pdf
 - READ THE LATEST COLLECTIONS OF ARTICLES AS POSSIBLE  TO GAIN A DEEP UNDERSTANDING
-- Look into other types of loss functions that I could use.
 - Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
-- Eventually, I need to ensure that it automatically creates the necessary directories
 - Go through all Pytorch documentation to explore what is possible
 - The training and testing execution path can be handled significantly better. Right now, they seem to be merged together somehow
 - Consider using batch_size=8... Dont be premature in the verdict... Read hardt carefully before making this a pacifier for everything...
-- Fix the conversion functions ( TensorToImage,etc)... Right now, they are directly copied over!!!
 - (Change the 'help' eventually!)
-- Examine their multiple approaches again and try to combine uniquely
-- Default setting doesn't use 'lighten' which normalizes the attention map... Experiment with this! Only appears just before
-- Focus on reducing noise!
-- Look into optimizing choice of batch size ( this seems very influential)... smaller batches= more significant changes per an update ( this is more noisy, though, the noise can help with the model's generalization capabilities)
-- Investigate the effect of increasing the number of patches that we extract
-- Check what size images we are working with. The paper and dataset reflects 600x400 but the processing seems to account for 320x320
 - It appears that the output is formed by multiplying the latent image with the low-light image. (Verify this!)
 - Check what is the purpose of the latent result
-- I dont see where is the vgg forward function called? In the Perceptual loss class, I see that we are using the vgg network but I dont see where we explicitly forward propagate. We dont, but investigate how is a result produced if we do not forward propagate
 
 
 
@@ -105,9 +81,6 @@ Concrete Investigative list
 - When writing the report, explain the effect of varying every single parameter individually!
 - Experiment the effect when instance normalization is used
 - Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary) # This relates to how the pre-trained model was trained
-- Go beyond what I wanted and state how exactly do I want to improve this in the long run
-- Check if it is absolutely necessary to have skip connections in the Unet generator
-- Try to understand how exactly to maneuver the input tensor (particularly in the get_target tensor function)
 - vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
 - What is the effect of the rate of convergence on the quality of the Output
 - I need to thoroughly understand the difference between a normal GAN, using MSE loss and LSGAN( I am using an LSGAN)... Look into why this is a good choice!
@@ -165,20 +138,14 @@ I changed DataParallel (towards the end of the definition of the generator and t
 - Find out the following from Richard: Find out the following: Its usually Conv->Batch-> Relu but here its Conv-> Relu->Batch. Answer! MLM states that this is not an issue. Org. paper has it like normal but experimentation revealed that better perf.
 
 
-
-
 Questions
 - Where does the perceptual loss fit in?
-- I see where we are calculating the attention map but I dont see where are we using it. A) When upsampling in the generator, we are also resizing them to match the feature map sizes.
 - Understand how the filters, kernels and strides are configured to achieve different things (In our case, it is just a matter of doubling the number of filters compared to the previous layer and vice versa when upsampling.)
 is achieved if placed after the activation layer. If possible, try to test both!
-- Why do many of the classes accept a parameter? An example being the unaligned_dataset class in unaligned_dataset.py
-- In vgg_preprocess, why are the colour channels reversed?
 
 
 My Experimentations:
 - Its okay if our training results seem small because for the prediction process, the original size is maintained.
-- Since I'm assuming that the model is being trained for even darkness, take matters into my own hands and try with my own images to verify!
 - For my experiment on batch vs instance normalization, there is a dedicated function (nn.InstanceNorm2d(in_features)--> Look into it more!)
 
 

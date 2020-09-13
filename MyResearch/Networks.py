@@ -122,13 +122,11 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # Check if there is really a need for these seperate patches
         # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
 
-
         self.fake_patch_list=[]
         self.real_patch_list=[]
         self.input_patch_list=[]
 
         # This will basically create 8 batches (of 16 patches each)
-
         for i in range(self.opt.patchD_3):
 
             w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
@@ -298,7 +296,7 @@ class GANLoss(nn.Module):
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
-def get_norm_layer(norm_type='instance'): # Optimize the position and the function itself.. Right now, it was directly copied over
+def get_norm_layer(norm_type='instance'): # Optimize the position and the function itself.. Right now, it was directly copied over... Look into this
     if norm_type == 'batch':
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
     elif norm_type == 'instance':
@@ -342,17 +340,16 @@ class UnetGenerator(nn.Module): # Perfect
     def __init__(self, num_downs,opt):
         ngf=64
         super(UnetGenerator, self).__init__()
-        self.opt = opt
 
         norm_type=get_norm_layer(opt.norm_type)
         # construct unet structure
-        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=None, norm_layer=norm_type)
+        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=None,position='innermost', norm_layer=norm_type)
         for i in range(num_downs - 5):
             unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8,submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(ngf, ngf * 2,submodule=unet_block, norm_layer=norm_type)
-        unet_block = UnetSkipConnectionBlock(3, ngf, submodule=unet_block, norm_layer=norm_type)# This is the outermost
+        unet_block = UnetSkipConnectionBlock(3, ngf, submodule=unet_block,position='outermost', norm_layer=norm_type)# This is the outermost
         self.model=unet_block
 
     def forward(self, input):
@@ -371,7 +368,6 @@ class UnetSkipConnectionBlock(nn.Module):
     def __init__(self, outer_nc, inner_nc,
                  submodule=None, position='intermediate', norm_layer=nn.BatchNorm2d): # Has the attention stuff as well... look into it before adding it
         super(UnetSkipConnectionBlock, self).__init__()
-        self.outermost = outermost
         input_nc=outer_nc
 
         if type(norm_layer) == functools.partial: # This will be adjusted depending on the analysis of 'get_norm_layer'
@@ -382,7 +378,7 @@ class UnetSkipConnectionBlock(nn.Module):
         downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,stride=2, padding=1,bias=use_bias) # The 3 is from looking at the encoder decoder approach
                              # Look into this!
         # Note that we we are not doing the double downsampling convolution
-        downrelu = nn.LeakyReLU(0.2, True)
+        downrelu = nn.LeakyReLU(0.2, True) # Look into the choice of activation function used!
         downnorm = norm_layer(inner_nc)
         uprelu = nn.ReLU(True)
         upnorm = norm_layer(outer_nc)
@@ -394,7 +390,7 @@ class UnetSkipConnectionBlock(nn.Module):
             up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
             down = [downconv]
             up = [uprelu, up_conv,nn.Tanh()]
-            model = MinimalUnet(down,up,submodule,withoutskip=outermost)
+            model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
@@ -468,7 +464,6 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
 		#This is to stabilize training
 
     def compute_vgg_loss(self,vgg_network,image,target):
-        #print("I am in Compute VGG_loss")
         #print(image.shape)
         image_vgg=vgg_preprocess(image)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
         target_vgg=vgg_preprocess(target)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
