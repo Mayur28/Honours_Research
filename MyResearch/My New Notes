@@ -2,6 +2,10 @@ MAJOR OVERHAUL NEEDED!!!!
 
 I'm now starting a THOROUGH POLISH!!!!
 ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
+Number 1 priority: In my version, there's still a colour bias being added for some reason... Could be cause by the difference in learning rate... This is not the cause... I can only now recall the Tanh? Everything else is the same... I am now training for longer
+      There's definitely an issue
+Look into what exactly 'get_norm_layer' does... It seems very nifty - we can initialize norm layers without having to specify the number of filters
+Optimize the padding functions
 - Check if additional data augmentation is necessary?
 Investigate the effect of decreasing the batch size
 # Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
@@ -18,15 +22,18 @@ Optimize the number of layers in the discriminator--> Sort out the normalization
 In the paper, focus thoroughly on the significance of the attention map
 Also explain the trajectory, how if first ended up with the UNet_resize_conv and reverted... Try to display some of the results
 When writing the paper, revise again the theory behind an LSGAN (she obviously doesn't know what it is--> Change that!)
-Start looking inti setting up the infastructure for the testing environment
-Look into better ways of saving the model or fix the current version
+Start looking inti setting up the infrastructure for the testing environment
+Look into better ways of saving the model or fix the current version... I tried revamping it, made no change???Before making any further tries, check if my version is still usable or not!
 Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level!
 Dont just carry on peeling away, there needs to be substance that still remains! --> Gordon Murray!
 Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
 #If I do get the speed, make sure I compare the size of my network to Official EGAN!
 Fix the 'ToImage' functions (right now, they are directly copied over)
-Check again if I should decay the learning rate? Wahat are others doing?--> Check isola and  others MaskShadowGAN
+Check again if I should decay the learning rate? What are others doing?--> Check isola and  others MaskShadowGAN
 What does .data do?
+Look into how Tensor and Variable works!
+Check other possible configurations of my network
+Try to get bilinear to work (if possible)
 
 
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import random
 from torch.autograd import Variable
-from ManageData import TensorToImage, LatentToImage, AttentionToImage
+from ManageData import TensorToImage
 import os
 from collections import OrderedDict
 import functools
@@ -11,9 +11,6 @@ import functools
 
 
 # Check what would be the story when testing? Would the networks below be created( sound silly but isnt!)
-
-# Check the story about the transformation needed for preprocessing ( If RGB-> BGR is really necessary)
-
 
 def weights_init(model): # This is optimized!!!
     class_name=model.__class__.__name__
@@ -58,8 +55,7 @@ def add_padding(input): # Optimize This!!!
         pad_bottom=0
 
     height,width=input.data.shape[2],input.data.shape[3]
-    assert width % divide ==0, " Width cant divided by stride"
-    assert height %divide==0, "Height cant divide by stride"
+
 
     return input,pad_left,pad_right,pad_top,pad_bottom
 
@@ -90,14 +86,14 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
             weights.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
 
         # Above looks optimized
-        # We shouldnt be coming here in the first place when we are testin, just load directly from the latest model that we saved
+        # We shouldnt be coming here in the first place when we are testing, just load directly from the latest model that we saved
         self.Gen=make_G(opt)
 
         if(self.opt.phase=='train'): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
-            self.G_Disc=make_Disc(opt,False) # This declaration should have a patch option because they have different number of layers each.
-            self.L_Disc=make_Disc(opt,True) # Check if this switch is working correctly or not!
+            self.G_Disc=make_Disc(opt,False)
+            self.L_Disc=make_Disc(opt,True)
 
-            self.model_loss=GANLoss() # They accept if we're using LSGAN and the type of tensore we're using ( These are standardized things in my implementation)
+            self.model_loss=GANLoss()
 
             #Check if the below optimizers are set in accordance with Radford!
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
@@ -106,6 +102,44 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
             if self.opt.phase!='train': # We shouldn't be coming here in the first place! We should directly be able to load the model...
                 self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
 
+    def forward(self):
+        # Look into what the Variable stuff is for
+
+        self.real_A=Variable(self.input_A)#Variable is basically a tensor (which represents a node in the comp. graph) and is part of the autograd package to easily compute gradients
+        self.real_B=Variable(self.input_B) #This contains the normal-light images ( sort of our reference images)
+        self.real_A_gray=Variable(self.input_A_gray) # This is the attention map
+        self.real_img=Variable(self.input_img) #In our configuation, input_img=input_A
+
+        #Make a prediction!
+        # What is the latent used for?
+        the_input=torch.cat([self.real_img,self.real_A_gray],1)
+        self.fake_B= self.Gen.forward(the_input)# We forward prop. a batch at a time, not individual images in the batch!
+        # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
+        w=self.real_A.size(3)
+        h=self.real_B.size(2)
+
+
+        # Check if there is really a need for these seperate patches
+        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
+
+
+        self.fake_patch_list=[]
+        self.real_patch_list=[]
+        self.input_patch_list=[]
+
+        # This will basically create 8 batches (of 16 patches each)
+
+        for i in range(self.opt.patchD_3):
+
+            w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
+            h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
+
+            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+
+            # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
+           # Honestly dont think the patch stuff is really being handled in the best way right now...
 
     #Perfect
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
@@ -138,48 +172,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         self.G_Disc_optimizer.step()
         self.L_Disc_optimizer.step()
-
-
-
-    def forward(self):
-        # Look into what the Variable stuff is for
-
-        self.real_A=Variable(self.input_A)#Variable is basically a tensor (which represents a node in the comp. graph) and is part of the autograd package to easily compute gradients
-        self.real_B=Variable(self.input_B) #This contains the normal-light images ( sort of our reference images)
-        self.real_A_gray=Variable(self.input_A_gray) # This is the attention map
-        self.real_img=Variable(self.input_img) #In our configuation, input_img=input_A
-
-
-        #Make a prediction!
-        # What is the latent used for?
-        the_input=torch.cat([self.real_img,self.real_A_gray],1)
-        self.fake_B= self.Gen.forward(the_input)# We forward prop. a batch at a time, not individual images in the batch!
-        # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
-        w=self.real_A.size(3)
-        h=self.real_B.size(2)
-
-
-        # Check if there is really a need for these seperate patches
-        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
-
-
-        self.fake_patch_list=[]
-        self.real_patch_list=[]
-        self.input_patch_list=[]
-
-        # This will basically create 8 batches (of 16 patches each)
-
-        for i in range(self.opt.patchD_3):
-
-            w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
-            h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
-
-            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
-            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
-            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
-
-            # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
-           # Honestly dont think the patch stuff is really being handled in the best way right now...
 
     def backward_G(self):
         # First let the discriminator make a prediction on the fake samples
@@ -264,11 +256,11 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self_attention= TensorToImage(self.real_A_gray.data)
         return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
-    def save_network(self, network, network_label, epoch_label):
-        save_filename = '%s_net_%s.pth' % (epoch_label, network_label)
-        save_path = os.path.join(self.save_dir, save_filename)
-        torch.save(network.cpu().state_dict(), save_path)
-        network.cuda(device=gpu_ids[0])
+    def save_network(self,network,label,epoch):
+        save_name='%s_net_%s.pth' %(epoch,label)
+        save_path=os.path.join(self.opt.save_dir,save_name)
+        torch.save(network.cpu().state_dict(),save_path)
+        network.cuda(device=self.opt.gpu_ids[0])
 
 
     def save_model(self,label):
@@ -280,7 +272,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 def make_G(opt):
     norm_layer=get_norm_layer(opt.norm_type)
-    generator=UnetGenerator(3, 3, 9, 64, norm_layer=norm_layer, opt=opt)
+    generator=UnetGenerator(9, opt)
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -298,11 +290,6 @@ def make_Disc(opt,patch):
 class GANLoss(nn.Module):
     def __init__(self):
         super(GANLoss,self).__init__()
-        self.real_label=1.0
-        self.fake_label=0.0
-        #Check the need for the var stuff?
-        self.real_label_var=None
-        self.fake_label_var=None
         self.Tensor=torch.cuda.FloatTensor
         self.loss=nn.MSELoss()
 
@@ -339,15 +326,6 @@ class MinimalUnet(nn.Module):
         else: # If it is the inner-most (this would be the base case of the recursion)
             x_up = self.down(x)
 
-        # x_up isn't anything more than what we're going to upsample(i.e it is the final result from downsampling)
-        # print("Before manipulation")
-        # print(x_up.size())
-        # print("X size")
-        # print(x.size())
-        # print("Self size")
-        # print((self.up(x_up).size()))
-
-
         if self.withoutskip: # No skip connections are used for the outer layer
             x_out = self.up(x_up)
         else:
@@ -360,56 +338,43 @@ class MinimalUnet(nn.Module):
 # |num_downs|: number of downsamplings in UNet. For example,
 # if |num_downs| == 7, image of size 128x128 will become of size 1x1
 # at the bottleneck
-class UnetGenerator(nn.Module):
-    def __init__(self, input_nc, output_nc, num_downs, ngf=64,
-                 norm_layer=nn.BatchNorm2d, skip=False, opt=None,basicblock=MinimalUnet):
-
-
-        # There additional parameters: is_attention_layer=False,attention_model=RASC,use_inner_attention=False,basicblock=MinimalUnet):
+class UnetGenerator(nn.Module): # Perfect
+    def __init__(self, num_downs,opt):
+        ngf=64
         super(UnetGenerator, self).__init__()
         self.opt = opt
-        # Makes sense - the input will have 4 channels and the output will have 3
-        #self.need_mask = not input_nc == output_nc # Get this to be false... Treat seperately!
 
-
+        norm_type=get_norm_layer(opt.norm_type)
         # construct unet structure
-        #As a parameter for the UnetSkipConnectionBlock, they are passing basic block as well. Investigate what is it's purpose
-        # Basic block is basically the Minimal Unet that they designed -->It is accepted by every Unet block... basic block influences the structure of the unet block
-        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,input_nc=None,submodule=None, norm_layer=norm_layer, innermost=True, opt=opt)
-        for i in range(num_downs - 5):# This are including 'is_attention_layer and attention_Model'
-            unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt) # Is attention layer, attention_model
-        unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt)# Att stuff
-        unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt)# Att stuff
-        unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt)# Att stuff
-        unet_block = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc,submodule=unet_block, outermost=True, norm_layer=norm_layer, opt=opt)
-
+        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=None, norm_layer=norm_type)
+        for i in range(num_downs - 5):
+            unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=unet_block, norm_layer=norm_type)
+        unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8,submodule=unet_block, norm_layer=norm_type)
+        unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, submodule=unet_block, norm_layer=norm_type)
+        unet_block = UnetSkipConnectionBlock(ngf, ngf * 2,submodule=unet_block, norm_layer=norm_type)
+        unet_block = UnetSkipConnectionBlock(3, ngf, submodule=unet_block, norm_layer=norm_type)# This is the outermost
         self.model=unet_block
 
     def forward(self, input):
 
         input, pad_left, pad_right, pad_top, pad_bottom = add_padding(input)
-        latent= self.model(input[:,0:3,:,:],input[:,3:4,:,:])
+        latent= self.model(input[:,0:3,:,:],input[:,3:4,:,:])# Extraction is correct!
         latent = remove_padding(latent, pad_left, pad_right, pad_top, pad_bottom)
         input = remove_padding(input, pad_left, pad_right, pad_top, pad_bottom)
-
-
-        return 1*input[:,0:3,:,:]+latent
+        return input[:,0:3,:,:]+latent
 
 
 # Defines the submodule with skip connection.
 # X -------------------identity---------------------- X
 #   |-- downsampling -- |submodule| -- upsampling --|
 class UnetSkipConnectionBlock(nn.Module):
-    def __init__(self, outer_nc, inner_nc, input_nc=None,
-                 submodule=None, outermost=False, innermost=False, norm_layer=nn.BatchNorm2d, opt=None,basicblock=MinimalUnet ): # Has the attention stuff as well... look into it before adding it
-        # The additional parameters: attention_model=RASC,basicblock=MinimalUnet,outermostattention=False
+    def __init__(self, outer_nc, inner_nc,
+                 submodule=None, position='intermediate', norm_layer=nn.BatchNorm2d): # Has the attention stuff as well... look into it before adding it
         super(UnetSkipConnectionBlock, self).__init__()
         self.outermost = outermost
+        input_nc=outer_nc
 
-        if input_nc is None: # This is fine
-            input_nc=outer_nc
-
-        if type(norm_layer) == functools.partial:
+        if type(norm_layer) == functools.partial: # This will be adjusted depending on the analysis of 'get_norm_layer'
             use_bias = norm_layer.func == nn.InstanceNorm2d
         else:
             use_bias = norm_layer == nn.InstanceNorm2d
@@ -422,23 +387,22 @@ class UnetSkipConnectionBlock(nn.Module):
         uprelu = nn.ReLU(True)
         upnorm = norm_layer(outer_nc)
 
-        if outermost:
+        if position=='outermost':
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
             #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
             up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
             down = [downconv]
             up = [uprelu, up_conv,nn.Tanh()]
-            model = basicblock(down,up,submodule,withoutskip=outermost)
-        elif innermost:
-
+            model = MinimalUnet(down,up,submodule,withoutskip=outermost)
+        elif position=='innermost':
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
             #up_conv =nn.Conv2d(inner_nc,int(0.5*outer_nc),kernel_size=4, stride=1, padding=0)
             up_conv= nn.ConvTranspose2d(inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
             down = [downrelu, downconv]
             up = [uprelu,up_conv,upnorm]
-            model = basicblock(down,up)
+            model = MinimalUnet(down,up)
         else:
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
@@ -447,7 +411,7 @@ class UnetSkipConnectionBlock(nn.Module):
             down = [downrelu, downconv,downnorm]
             up = [uprelu,up_conv,upnorm]
 
-            model = basicblock(down,up,submodule) # They accept attention model and "outermost attention"
+            model = MinimalUnet(down,up,submodule)
 
         self.model =model
 
