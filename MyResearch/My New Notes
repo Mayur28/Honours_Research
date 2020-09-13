@@ -7,7 +7,6 @@ ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
 - Look into what exactly 'get_norm_layer' does... It seems very nifty - we can initialize norm layers without having to specify the number of filters
 - Optimize the padding functions
 - Check if additional data augmentation is necessary?
-- Obtain my final version of the discriminator (I want normalization!)
 - Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
 
 
@@ -21,7 +20,6 @@ Experiment with Normal Relu and Leaky Relu in the generator?
 # For vgg_choose, check what was the purpose of having so many different options.
 Check what exactly is going on for the downsampling
 Really get a grip of what is happening in my network!
-Optimize the number of layers in the discriminator--> Sort out the normalization as well
 In the paper, focus thoroughly on the significance of the attention map
 Also explain the trajectory, how if first ended up with the UNet_resize_conv and reverted... Try to display some of the results
 When writing the paper, revise again the theory behind an LSGAN (she obviously doesn't know what it is--> Change that!)
@@ -40,6 +38,7 @@ Try to get bilinear to work (if possible)
 Extract alot of variation from the VGG network
 If possible look into variation in the Perceptual Loss
 Look into what can be done to reduce noise
+The PatchGAN now has BatchNormalization (WITH BIASES, ONCE THE COLOR BIAS IS SORTED OUT, CHECK IF THIS NORM BIAS IS NECESSARY OR NOT)
 
 
 
@@ -107,7 +106,6 @@ For comparison, compare to paired approaches and consider below option
 Look at FID for evaluating the results (Read the Pytorch implementation of CycleGan by Chinese Isola)
 EnlightenGAN used majority of Isola's code as a base/ skeleton!!!
 -Its interesting that GANs only generate square images!
-THe PatchGAN structure is perfect!
 Note! Increasing from EGAN 6 patches to 8 patches, improvement seems likely but increases the runtime by 4-5 seconds... Dont only focus on runtime and neglect quality of results.... I like the results when 8 patches are used despite the longer runtime... Mention this caveat in the report
 
 

@@ -423,26 +423,33 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
             no_layers=self.opt.n_layers_patchD
         else:
             no_layers=self.opt.n_layers_D
+
+        if type(norm_layer) == functools.partial:  # no need to use bias as BatchNorm2d has affine parameters
+            use_bias = norm_layer.func == nn.InstanceNorm2d
+        else:
+            use_bias = norm_layer == nn.InstanceNorm2d
+
+        ndf=64
         # Needs to be treated seperately (as advised by Radford - we dont apply on output of generator and input of discriminator)
-        sequence=[nn.Conv2d(3,64,kernel_size=4,stride=2,padding=2),nn.LeakyReLU(0.2,True)]
+        sequence=[nn.Conv2d(3,ndf,kernel_size=4,stride=2,padding=2),
+        nn.LeakyReLU(0.2,True)]
         # The rubbish below can be modified!
         # Filter out this rubbish ( Warning 1 - its the simple input output procedure)
         # Output collapses from 512 - 1... Check what does the 1 activation map represent
         # Needs to be completely restructured according to Radford
         # Look at flagship papers, as well as morphing EGAN's alternate implementations and get ideas from other papers
-        ndf=64
         nf_mult=1
         nf_mult_prev=1
         for n in range(1,no_layers):
             nf_mult_prev=nf_mult
             nf_mult=min(2**n,8)
-            sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
+            sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2,bias=use_bias),
             nn.BatchNorm2d(ndf*nf_mult),
             nn.LeakyReLU(0.2,True)]
 
         nf_mult_prev=nf_mult
-        nf_mult= min(2*no_layers,8)
-        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2),
+        nf_mult= min(2**no_layers,8)
+        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2,bias=use_bias),
         nn.BatchNorm2d(ndf*nf_mult),
         nn.LeakyReLU(0.2,True)]
 
