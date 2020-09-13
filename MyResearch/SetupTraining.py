@@ -3,31 +3,11 @@ import torch
 import argparse
 import time
 
-#(Change the 'help' eventually!)
-# vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
-# Examine their multiple approaches again and try to combine uniquely
-# They are using maxpooling in the generator, not avg_pooling... Check Radford's appraoch to downsampling
-# I want tanh at the end of mine!--> Check if this would break the definition of an LSGAN
-# Default setting doesn't use 'lighten' which normalizes the attention map... Experiment with this! Only appears just before
-#the attention map calculation...
-# Theres actually a lot that I removed from 'UnalignedDataset' that appears to relate to data augmentation... Experiment with this
-# What does pool_size do and affect results?
-
-# Calibrate optimize_parameters
-#batch_size
-# Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
-# The normalization type
-# PatchD_3 ( number of images that we are cropping)
-# learning rate
-
 class SetupTraining():
     def __init__(self):
         self.parser=argparse.ArgumentParser()
         self.parser.add_argument('--name', type=str, default='TheModel', help="Name of the current execution")
-        self.parser.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
-
         # Calibrate the batch batch_size, crop_size and patch_size
-        # Now the generator will need toa ccomodate for 512x512
         self.parser.add_argument('--batch_size', type=int, default=16, help='input batch size (One of the aspects that can be used to control GPU requirements)')
         self.parser.add_argument('--crop_size', type=int, default=340, help='Crop the images to this new size')
         self.parser.add_argument('--patch_size', type=int, default=32, help='specifies the size of the patch that we are going to use')
@@ -38,49 +18,30 @@ class SetupTraining():
         # Experiment with this being Batch as well!
         self.parser.add_argument('--norm_type', type=str, default='instance', help='instance normalization or batch normalization')
         self.parser.add_argument('--num_downs',type=int, default=9,help=' How many U-net modules are created in the generator')
-
-
-        self.parser.add_argument('--skip', default=True, help='B = net.forward(A) + skip*A')
-        # use_norm will be set to true by default
+        # THe below variable is actually useless but remember the reasoning behind it!
         self.parser.add_argument('--use_ragan', default=True, action='store_true', help='use ragan')
-        #Sort out the VGG stuff!
-        self.parser.add_argument('--vgg', type=float, default=1.0, help='use perceptrual loss')
-        # vgg_mean was false!
-        # vgg_choose will be set to relu5_1. Remove the if-statements in networks.py
-        # For vgg_choose, check what was the purpose of having so many different options.
-        # Examine their multiple approaches again and train to combine uniquely
-        #no_vgg_instance=False
-        # vgg_maxpooling=False
-        # use_avgpool specifies if we use average or max pooling... Experiment with this!
         self.parser.add_argument('--n_layers_D', type=int, default=5, help='number of layers in global discriminator')
         self.parser.add_argument('--n_layers_patchD', type=int, default=4, help='number of layers in local discriminator')
         self.parser.add_argument('--patchD_3', type=int, default=6, help='Number of patches to crop for the local discriminator')
         # To be in accordance with EGAN, change above to 6 ( When not using the individual patch)
-
-        # Maxpooling is used instead of avg_pooling to downsample in the generator
-        self.parser.add_argument('--use_avgpool', type=float, default=0, help='use perceptual loss')
-        # noise will be set to 0 by default
         self.parser.add_argument('--patch_vgg', default=True, action='store_true', help='use vgg loss between each patch')
         self.parser.add_argument('--hybrid_loss', default=True, action='store_true', help='use lsgan and ragan separately')
-        self.parser.add_argument('--self_attention', default= True,  action='store_true', help='adding attention on the input of generator')
-        # We have this! What does it do? Multiplies the latent result to the attention map in the generator... But why?
-        #Now, the proper training options
-        self.parser.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
-        self.parser.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')
-        self.parser.add_argument('--save_epoch_freq', type=int, default=5, help='frequency of saving checkpoints at the end of epochs')
-        self.parser.add_argument('--phase', type=str, default='train', help='train, val, test, etc')
+
         self.parser.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
         self.parser.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
         self.parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
         self.parser.add_argument('--lr', type=float, default=0.00015, help='initial learning rate for adam')
         # EGAN used 0.0001 but Radford recommended 0.0002
-        self.parser.add_argument('--no_lsgan', action='store_true', help='do *not* use least square GAN, if false, use vanilla GAN')
-        self.isTrain = True
+        # Below does not need to be printed
+        self.parser.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
+        self.parser.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
+        self.parser.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')
+        self.parser.add_argument('--save_epoch_freq', type=int, default=5, help='frequency of saving checkpoints at the end of epochs')
+        self.parser.add_argument('--phase', type=str, default='train', help='train, val, test, etc')
 
 
     def process(self): # I dont need to be printing the display and other useless information
         self.opt = self.parser.parse_args()
-        self.opt.isTrain = self.isTrain
 
         str_ids = self.opt.gpu_ids.split(',')
         self.opt.gpu_ids = []

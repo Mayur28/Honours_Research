@@ -1,9 +1,24 @@
 MAJOR OVERHAUL NEEDED!!!!
 
+I'm now starting a THOROUGH POLISH!!!!
+ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
+- Check if additional data augmentation is necessary?
+Investigate the effect of decreasing the batch size
+# Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
+#(Change the 'help' eventually!) in Setup Training
+# vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
 Note that the default that they set uses Instance normalization in the generator!!! --> This has been verified
 ToDo: Try with batch normalization
+Sort out the discriminator's normalization as well
+Experiment with Normal Relu and Leaky Relu in the generator?
+# For vgg_choose, check what was the purpose of having so many different options.
+Check what exactly is going on for the downsampling
+Really get a grip of what is happening in my network!
+Optimize the number of layers in the discriminator--> Sort out the normalization as well
+In the paper, focus thoroughly on the significance of the attention map
+Also explain the trajectory, how if first ended up with the UNet_resize_conv and reverted... Try to display some of the results
+When writing the paper, revise again the theory behind an LSGAN (she obviously doesn't know what it is--> Change that!)
 
-Experiment with Normal Relu and Leaky Relu
 
 
 Revert notes

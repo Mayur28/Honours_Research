@@ -30,13 +30,13 @@ def add_padding(input): # Optimize This!!!
 
     if width%divide!=0 or height %divide !=0:
 
-        width_res=width % width%divide
-        height_res= height_ord %divide
+        width_res=width % divide
+        height_res= height%divide
 
         if(width_res !=0):
             width_div=divide-width_res
             pad_left = int(width_div/2)
-            pred_right=int(width_div-pad_left)
+            pad_right=int(width_div-pad_left)
         else:
             pad_left =0
             pad_right= 0
@@ -61,7 +61,7 @@ def add_padding(input): # Optimize This!!!
     assert width % divide ==0, " Width cant divided by stride"
     assert height %divide==0, "Height cant divide by stride"
 
-    return input,pad_left,pad_right,pad_top_pad_bottom
+    return input,pad_left,pad_right,pad_top,pad_bottom
 
 
 def remove_padding( input,pad_left,pad_right,pad_top,pad_bottom):
@@ -93,7 +93,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # We shouldnt be coming here in the first place when we are testin, just load directly from the latest model that we saved
         self.Gen=make_G(opt)
 
-        if(self.opt.isTrain): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
+        if(self.opt.phase=='train'): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
             self.G_Disc=make_Disc(opt,False) # This declaration should have a patch option because they have different number of layers each.
             self.L_Disc=make_Disc(opt,True) # Check if this switch is working correctly or not!
 
@@ -103,7 +103,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.G_Disc_optimizer=torch.optim.Adam(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.L_Disc_optimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            if self.opt.isTrain==False: # We shouldn't be coming here in the first place! We should directly be able to load the model...
+            if self.opt.phase!='train': # We shouldn't be coming here in the first place! We should directly be able to load the model...
                 self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
 
 
@@ -152,7 +152,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
         #Make a prediction!
         # What is the latent used for?
-        the_input={0:self.real_img,1: self.real_A_gray}
+        the_input=torch.cat([self.real_img,self.real_A_gray],1)
         self.fake_B= self.Gen.forward(the_input)# We forward prop. a batch at a time, not individual images in the batch!
         # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
         w=self.real_A.size(3)
@@ -285,7 +285,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
 def make_G(opt):
-    generator=Unet_Generator(opt) # The get_norm_layer stuff gets adding here
+    norm_layer=get_norm_layer(opt.norm_type)
+    generator=UnetGenerator(3, 3, 9, 64, norm_layer=norm_layer, opt=opt)
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -328,35 +329,6 @@ def get_norm_layer(norm_type='instance'): # Optimize the position and the functi
     return norm_layer
 
 
-class Unet_Generator(nn.Module): # Will work with 256x256 input images
-    def __init__(self,opt):
-        super(Unet_Generator,self).__init__()
-        num_downs= opt.num_downs
-        #The generator gets built from the innermost modules first (Where the bottleneck occurs)
-        self.opt=opt
-        ngf=64
-        norm_type=get_norm_layer(opt.norm_type) # Look into why are we working with functional partial stuff???
-        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,norm_layer=norm_type,innermost=True) # Innermost
-        for i in range(num_downs - 5):
-            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,submodule=unet_block,norm_layer=norm_type)
-        # Gradually decrease the the number of filters from ngf*8 to ngf
-        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,input_nc=None,submodule=unet_block,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,input_nc=None,submodule=unet_block,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,input_nc=None,submodule=unet_block,norm_layer=norm_type)
-        unet_block= UnetSkipConnectionBlock(3,ngf,input_nc=3, submodule=unet_block,outermost=True,norm_layer=norm_type) # The outer layer sandwiches the entire network
-        self.model=unet_block
-
-
-    def forward(self,input):
-
-        input,pad_left,pad_right,pad_top,pad_bottom= add_padding(input)
-        latent= self.model(input[:,0:3,:,:],input[:,3:4,:,:])
-        latent= remove_padding(latent,pad_left,pad_right,pad_top,pad_bottom)
-        input= remove_padding(input,pad_left,pad_right,pad_top,pad_bottom)
-        return 1*input[:,0:3,:,:]+latent
-
-# My input should be [16:4:256,256], Then, from the 4, I should extract the one channel as the attention map...
-
 class MinimalUnet(nn.Module):
     def __init__(self,down=None,up=None,submodule=None,withoutskip=False,**kwargs):
         super(MinimalUnet,self).__init__()
@@ -373,32 +345,89 @@ class MinimalUnet(nn.Module):
         else: # If it is the inner-most (this would be the base case of the recursion)
             x_up = self.down(x)
 
+        # x_up isn't anything more than what we're going to upsample(i.e it is the final result from downsampling)
+        # print("Before manipulation")
+        # print(x_up.size())
+        # print("X size")
+        # print(x.size())
+        # print("Self size")
+        # print((self.up(x_up).size()))
 
 
         if self.withoutskip: # No skip connections are used for the outer layer
-            x_out =self.up(x_up)
+            x_out = self.up(x_up)
         else:
             x_out = (torch.cat([x,self.up(x_up)],1),mask)
+
         return x_out
 
-class  UnetSkipConnectionBlock(nn.Module): # Thos can be optimized!!!
-    def __init__(self,outer_nc,inner_nc,input_nc=None,submodule=None,outermost=False,innermost=False,norm_layer=None,basicblock=MinimalUnet):
-        super( UnetSkipConnectionBlock,self).__init__()
-        self.outermost=outermost
+
+# Defines the Unet generator.
+# |num_downs|: number of downsamplings in UNet. For example,
+# if |num_downs| == 7, image of size 128x128 will become of size 1x1
+# at the bottleneck
+class UnetGenerator(nn.Module):
+    def __init__(self, input_nc, output_nc, num_downs, ngf=64,
+                 norm_layer=nn.BatchNorm2d, skip=False, opt=None,basicblock=MinimalUnet):
+
+
+        # There additional parameters: is_attention_layer=False,attention_model=RASC,use_inner_attention=False,basicblock=MinimalUnet):
+        super(UnetGenerator, self).__init__()
+        self.opt = opt
+        # Makes sense - the input will have 4 channels and the output will have 3
+        #self.need_mask = not input_nc == output_nc # Get this to be false... Treat seperately!
+
+
+        # construct unet structure
+        #As a parameter for the UnetSkipConnectionBlock, they are passing basic block as well. Investigate what is it's purpose
+        # Basic block is basically the Minimal Unet that they designed -->It is accepted by every Unet block... basic block influences the structure of the unet block
+        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,input_nc=None,submodule=None, norm_layer=norm_layer, innermost=True, opt=opt)
+        for i in range(num_downs - 5):# This are including 'is_attention_layer and attention_Model'
+            unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt) # Is attention layer, attention_model
+        unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt)# Att stuff
+        unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt)# Att stuff
+        unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None,submodule=unet_block, norm_layer=norm_layer, opt=opt)# Att stuff
+        unet_block = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc,submodule=unet_block, outermost=True, norm_layer=norm_layer, opt=opt)
+
+        self.model=unet_block
+
+    def forward(self, input):
+        print(type(input))
+
+        input, pad_left, pad_right, pad_top, pad_bottom = add_padding(input)
+        latent= self.model(input[:,0:3,:,:],input[:,3:4,:,:])
+        latent = remove_padding(latent, pad_left, pad_right, pad_top, pad_bottom)
+        input = remove_padding(input, pad_left, pad_right, pad_top, pad_bottom)
+
+
+        return 1*input[:,0:3,:,:]+latent
+
+
+# Defines the submodule with skip connection.
+# X -------------------identity---------------------- X
+#   |-- downsampling -- |submodule| -- upsampling --|
+class UnetSkipConnectionBlock(nn.Module):
+    def __init__(self, outer_nc, inner_nc, input_nc=None,
+                 submodule=None, outermost=False, innermost=False, norm_layer=nn.BatchNorm2d, opt=None,basicblock=MinimalUnet ): # Has the attention stuff as well... look into it before adding it
+        # The additional parameters: attention_model=RASC,basicblock=MinimalUnet,outermostattention=False
+        super(UnetSkipConnectionBlock, self).__init__()
+        self.outermost = outermost
 
         if input_nc is None: # This is fine
             input_nc=outer_nc
 
-        if type(norm_layer) == functools.partial:# All this was directly copied over
+        if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
         else:
             use_bias = norm_layer == nn.InstanceNorm2d
 
-        downconv= nn.Conv2d(input_nc, inner_nc,kernel_size=4,stride=2,padding=1,bias=use_bias)
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,stride=2, padding=1,bias=use_bias) # The 3 is from looking at the encoder decoder approach
+                             # Look into this!
+        # Note that we we are not doing the double downsampling convolution
+        downrelu = nn.LeakyReLU(0.2, True)
         downnorm = norm_layer(inner_nc)
-        downrelu=nn.LeakyReLU(0.2,True)# Experiment with this and normal Relu
-        uprelu=nn.ReLU(True)# What the hell???
-        upnorm=norm_layer(outer_nc)
+        uprelu = nn.ReLU(True)
+        upnorm = norm_layer(outer_nc)
 
         if outermost:
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
@@ -406,9 +435,10 @@ class  UnetSkipConnectionBlock(nn.Module): # Thos can be optimized!!!
             #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
             up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
             down = [downconv]
-            up = [uprelu, up_conv]
+            up = [uprelu, up_conv,nn.Tanh()]
             model = basicblock(down,up,submodule,withoutskip=outermost)
         elif innermost:
+
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
             #up_conv =nn.Conv2d(inner_nc,int(0.5*outer_nc),kernel_size=4, stride=1, padding=0)
@@ -426,14 +456,10 @@ class  UnetSkipConnectionBlock(nn.Module): # Thos can be optimized!!!
 
             model = basicblock(down,up,submodule) # They accept attention model and "outermost attention"
 
+        self.model =model
 
-
-    def forward(self,input): # This is propagating through one block
+    def forward(self,x,mask=None):
         return self.model(x,mask)
-
-
-
-
 
 class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is absolutely "textbook stuff"
     def __init__(self,opt,patch):
