@@ -22,49 +22,7 @@ def weights_init(model): # This is optimized!!!
         torch.nn.init.constant_(model.bias.data,0.0)
 
 
-def add_padding(input): # Optimize This!!!
-    height, width= input.shape[2],input.shape[3]
-    divide =512
 
-    if width%divide!=0 or height %divide !=0:
-
-        width_res=width % width%divide
-        height_res= height_ord %divide
-
-        if(width_res !=0):
-            width_div=divide-width_res
-            pad_left = int(width_div/2)
-            pred_right=int(width_div-pad_left)
-        else:
-            pad_left =0
-            pad_right= 0
-
-        if(height_res !=0):
-            height_div= divide -height_res
-            pad_top =int(height_div/2)
-            pad_bottom =int(height_div -pad_top)
-        else:
-            pad_top=0
-            pad_bottom =0
-
-        padding= nn.ReflectionPad2d((pad_left,pad_right,pad_top,pad_bottom))
-        input=padding(input)
-    else:
-        pad_left=0
-        pad_right=0
-        pad_top=0
-        pad_bottom=0
-
-    height,width=input.data.shape[2],input.data.shape[3]
-    assert width % divide ==0, " Width cant divided by stride"
-    assert height %divide==0, "Height cant divide by stride"
-
-    return input,pad_left,pad_right,pad_top_pad_bottom
-
-
-def remove_padding( input,pad_left,pad_right,pad_top,pad_bottom):
-    height,width =input.shape[2],input.shape[3]
-    return input[:,:,pad_top:height-pad_bottom,pad_left:width-pad_right]
 
 class The_Model: # This is the grand model that encompasses everything ( the generator, both discriminators and the VGG network)
     def __init__(self,opt):
@@ -283,7 +241,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
 def make_G(opt):
-    generator=Unet_generator1(opt)
+    generator=Unet_generator1( 8,opt)
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -314,126 +272,66 @@ class GANLoss(nn.Module):
         return self.loss(input,target_tensor) # We then perform MSE on this!
 
 
-def get_norm_layer(norm_type='instance'): # Optimize the position and the function itself.. Right now, it was directly copied over
-    if norm_type == 'batch':
-        norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
-    elif norm_type == 'instance':
-        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
-    elif norm_type == 'synBN':
-        norm_layer = functools.partial(SynBN2d, affine=True)
-    else:
-        raise NotImplementedError('normalization layer [%s] is not found' % norm)
-    return norm_layer
-
-
 class Unet_generator1(nn.Module): # Will work with 256x256 input images
-    def __init__(self,opt):
+    def __init__(self,num_downs,opt):
         super(Unet_generator1,self).__init__()
-        num_downs= opt.num_downs
+
         #The generator gets built from the innermost modules first (Where the bottleneck occurs)
         self.opt=opt
         ngf=64
-        norm_type=get_norm_layer(opt.norm_type) # Look into why are we working with functional partial stuff???
-        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,norm_layer=norm_type,innermost=True) # Innermost
+        norm_type='batch'
+        unet_block= UnetSkipConnectionBlock(ngf*8,ngf*8,norm_layer=norm_type,innermost=True) # Innermost
         for i in range(num_downs - 5):
-            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,input_nc=None,unet_block,norm_layer=norm_type)
+            unet_block=UnetSkipConnectionBlock(ngf*8,ngf*8,unet_block,norm_layer=norm_type)
         # Gradually decrease the the number of filters from ngf*8 to ngf
-        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,,input_nc=None,unet_block,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,input_nc=None,unet_block,norm_layer=norm_type)
-        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,input_nc=None,unet_block,norm_layer=norm_type)
-        unet_block= UnetSkipConnectionBlock(3,ngf,input_nc=3, unet_block,outermost=True,norm_layer=norm_type) # The outer layer sandwiches the entire network
+        unet_block=UnetSkipConnectionBlock(ngf*4,ngf*8,unet_block,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf*2,ngf*4,unet_block,norm_layer=norm_type)
+        unet_block=UnetSkipConnectionBlock(ngf,ngf*2,unet_block,norm_layer=norm_type)
+        unet_block= UnetSkipConnectionBlock(3,ngf,unet_block,outermost=True,norm_layer=norm_type) # The outer layer sandwiches the entire network
         self.model=unet_block
 
 
     def forward(self,input):
+        latent=self.model(input) # This just calls the propagation of the full network and stores the result
+        return self.opt.skip*x+latent
 
-        input,pad_left,pad_right,pad_top,pad_bottom= add_padding(input)
-        latent= self.model(input[:,0:3,:,:],input[:,3:4,:,:])
-        latent= remove_padding(latent,pad_left,pad_right,pad_top,pad_bottom)
-        input= remove_padding(input,pad_left,pad_right,pad_top,pad_bottom)
-        return 1*input[:,0:3,:,:]+latent
-
-# My input should be [16:4:256,256], Then, from the 4, I should extract the one channel as the attention map...
-
-class MinimalUnet(nn.Module):
-    def __init__(self,down=None,up=None,submodule=None,withoutskip=False,**kwargs):
-        super(MinimalUnet,self).__init__()
-
-        self.down=nn.Sequential(*down) #THE LHS WILL HOLD THE RESULT!!!
-        self.sub =submodule
-        self.up= nn.Sequential(*up)
-        self.withoutskip= withoutskip
-        self.is_sub = not submodule == None # Will be false only for the innermost
-
-    def forward(self,x,mask=None):
-        if self.is_sub: # Almost recursive in a way
-            x_up,_ = self.sub(self.down(x),mask)
-        else: # If it is the inner-most (this would be the base case of the recursion)
-            x_up = self.down(x)
-
-        # x_up isn't anything more than what we're going to upsample
-        # print("Before manipulation")
-        # print(x_up.size())
-        # print("X size")
-        # print(x.size())
-        # print("Self size")
-        # print((self.up(x_up).size()))
-
-
-        if self.withoutskip: # No skip connections are used for the outer layer
-            x_out =self.up(x_up)
-        else:
-            x_out = (torch.cat([x,self.up(x_up)],1),mask)
-        return x_out
-
-class  UnetSkipConnectionBlock(nn.Module): # Thos can be optimized!!!
-    def __init__(self,outer_nc,inner_nc,input_nc=None,submodule=None,outermost=False,innermost=False,norm_layer=None,basicblock=MinimalUnet):
+class  UnetSkipConnectionBlock(nn.Module):
+    def __init__(self,outer_nc,inner_nc,submodule=None,outermost=False,innermost=False,norm_layer=None,gray_image=None):
         super( UnetSkipConnectionBlock,self).__init__()
         self.outermost=outermost
 
-        if input_nc is None: # This is fine
-            input_nc=outer_nc
+        downconv= nn.Conv2d(outer_nc,inner_nc,kernel_size=4,stride=2,padding=1)
+        downrelu=nn.ReLU(True)# Im using Relu only in generator, they use leakyRelu
+        downnorm=nn.BatchNorm2d(inner_nc)
+        uprelu=nn.ReLU(True)
+        upnorm=nn.BatchNorm2d(outer_nc)
 
-        if type(norm_layer) == functools.partial:# All this was directly copied over
-            use_bias = norm_layer.func == nn.InstanceNorm2d
+        if( outermost): # We dont perform Batch normalization on outer layers(as recommended by Radfors)
+            upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+            down=[downconv]
+            up=[uprelu,upconv,nn.Tanh()]
+            model=down+[submodule]+up
+        elif(innermost):
+            upconv=nn.ConvTranspose2d(inner_nc,outer_nc,kernel_size=4,stride=2,padding=1)
+            down=[downrelu,downconv]
+            up=[uprelu,upconv,upnorm]
+            model=down+up
+
         else:
-            use_bias = norm_layer == nn.InstanceNorm2d
+            upconv=nn.ConvTranspose2d(inner_nc*2,outer_nc,kernel_size=4,stride=2,padding=1)
+            down=[downrelu,downconv,downnorm]
+            up = [uprelu,upconv,upnorm]
 
-        downconv= nn.Conv2d(input_nc, inner_nc,kernel_size=4,stride=2,padding=1,bias=use_bias)
-        downrelu=nn.LeakyReLU(0.2,True)# Experiment with this and normal Relu
-        uprelu=nn.ReLU(True)# What the hell???
-        upnorm=norm_layer(outer_nc)
-
-        if outermost:
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
-            down = [downconv]
-            up = [uprelu, up_conv]
-            model = basicblock(down,up,submodule,withoutskip=outermost)
-        elif innermost:
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(inner_nc,int(0.5*outer_nc),kernel_size=4, stride=1, padding=0)
-            up_conv= nn.ConvTranspose2d(inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
-            down = [downrelu, downconv]
-            up = [uprelu,up_conv,upnorm]
-            model = basicblock(down,up)
-        else:
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
-            down = [downrelu, downconv,downnorm]
-            up = [uprelu,up_conv,upnorm]
-
-            model = basicblock(down,up,submodule) # They accept attention model and "outermost attention"
-
-
+            model=down+[submodule]+up
+        self.model =nn.Sequential(*model)
 
     def forward(self,input): # This is propagating through one block
-        return self.model(x,mask)
+        if self.outermost: # Only the input itself
+            return self.model(input[0])
+        else:
+            print(input[0].size())
+            print(input[1].size())
+            return torch.cat([self.model(input[0]), input[1]], 1)
 
 
 

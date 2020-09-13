@@ -27,15 +27,17 @@ class SetupTraining():
         self.parser.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
 
         # Calibrate the batch batch_size, crop_size and patch_size
+        # Now the generator will need toa ccomodate for 512x512
         self.parser.add_argument('--batch_size', type=int, default=16, help='input batch size (One of the aspects that can be used to control GPU requirements)')
-        self.parser.add_argument('--crop_size', type=int, default=256, help='Crop the images to this new size')
+        self.parser.add_argument('--crop_size', type=int, default=340, help='Crop the images to this new size')
         self.parser.add_argument('--patch_size', type=int, default=32, help='specifies the size of the patch that we are going to use')
         # This can be modified according to the number of GPU's used to train the model
         self.parser.add_argument('--gpu_ids', type=str, default='0', help="Used to specify the ID's of the GPU's to be used (e.g 0,1 if 2 GPU's are used)")
 
         self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/MyResearch/', help='models are saved here')
-        self.parser.add_argument('--norm_type', type=str, default='batch', help='instance normalization or batch normalization')
-        self.parser.add_argument('--num_downs',type=int,default=8,help=' How many U-net modules are created in the generator')
+        # Experiment with this being Batch as well!
+        self.parser.add_argument('--norm_type', type=str, default='instance', help='instance normalization or batch normalization')
+        self.parser.add_argument('--num_downs',type=int, default=9,help=' How many U-net modules are created in the generator')
 
 
         self.parser.add_argument('--skip', default=True, help='B = net.forward(A) + skip*A')

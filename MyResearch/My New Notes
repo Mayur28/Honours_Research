@@ -1,5 +1,11 @@
 MAJOR OVERHAUL NEEDED!!!!
 
+Note that the default that they set uses Instance normalization in the generator!!! --> This has been verified
+ToDo: Try with batch normalization
+
+Experiment with Normal Relu and Leaky Relu
+
+
 Revert notes
 Compare between "Remove individual patch" and "pinned memory"... Only the network.py is different ( Where I tried to optimize the generator and discriminator)
 For any verification, execute "Minor changes to Perfect" from GitHub
