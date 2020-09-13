@@ -11,9 +11,6 @@ def DataLoader(opt):
     data_loader=DataLoader(opt)
     return data_loader
 
-def MakeDataset(opt):
-    dataset=FullDataset(opt)
-    return dataset
 
 def import_dataset(directory):
     images = []
@@ -39,7 +36,7 @@ def the_gray_transform():
 class DataLoader:
     def __init__(self,opt):
         self.opt=opt
-        self.dataset=MakeDataset(opt)# Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
+        self.dataset=FullDataset(opt)# Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
         self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, pin_memory=True,num_workers=6)
 
     def load(self):# This will return the iterable over the dataset

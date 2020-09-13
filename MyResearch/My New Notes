@@ -18,6 +18,8 @@ Optimize the number of layers in the discriminator--> Sort out the normalization
 In the paper, focus thoroughly on the significance of the attention map
 Also explain the trajectory, how if first ended up with the UNet_resize_conv and reverted... Try to display some of the results
 When writing the paper, revise again the theory behind an LSGAN (she obviously doesn't know what it is--> Change that!)
+Start looking inti setting up the infastructure for the testing environment
+Look into better ways of saving the model or fix the current version
 
 
 

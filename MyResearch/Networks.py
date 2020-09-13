@@ -392,7 +392,6 @@ class UnetGenerator(nn.Module):
         self.model=unet_block
 
     def forward(self, input):
-        print(type(input))
 
         input, pad_left, pad_right, pad_top, pad_bottom = add_padding(input)
         latent= self.model(input[:,0:3,:,:],input[:,3:4,:,:])
