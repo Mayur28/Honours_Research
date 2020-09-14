@@ -5,12 +5,10 @@ Dont just carry on peeling away, there needs to be substance that still remains!
 
 I'm now starting a THOROUGH POLISH!!!!
 ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
-- Number 1 priority: In my version, there's still a colour bias being added for some reason... Could be cause by the difference in learning rate... This is not the cause... I can only now recall the Tanh? Everything else is the same... I am now training for longer
-      There's definitely an issue
-- Look into what exactly 'get_norm_layer' does... It seems very nifty - we can initialize norm layers without having to specify the number of filters
+
 - Optimize the padding functions
-- Check if additional data augmentation is necessary?
 - Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
+
 
 To Do
 - Start looking into setting up the infrastructure for the testing environment
@@ -55,6 +53,7 @@ Reading Up Investigation
 - Look into the LATENT stuff for once and for all!
 
 Concrete Investigative list
+- The code seems to be very sensitive to the version of Pytorch used! The gray_transform was a mission (more particularly A-Img to Grayscale(with one channel))
 - Investigate how was the low-light images of egan formed? They seem very artificial... An example being 23_2... The sky cant be that dim... In the paper, that mention the 4 sources (2 normal) and 2 HDR sources... INVESTIGATE THIS THOROUGHLY... could help with quality of performance.
 - Experiment the effect when instance normalization is used
 - vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used

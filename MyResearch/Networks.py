@@ -23,42 +23,21 @@ def weights_init(model): # This is optimized!!!
 
 def add_padding(input): # Optimize This!!!
     height, width= input.shape[2],input.shape[3]
-    divide =512
 
-    if width%divide!=0 or height %divide !=0:
+    optimal_size=512
+    pad_left = pad_right = pad_top= pad_bottom= 0
+    if(width!=optimal_size):
+        width_diff= optimal_size-width
+        pad_left= numpy.ceil(width_diff/2)
+        pad_right= width_diff-pad_left
+    if(height!=optimal_size):
+        height_diff=optimal_size-height
+        pad_top= np.ceil(height_diff/2)
+        pad_bottom= height_diff-pad_top
 
-        width_res=width % divide
-        height_res= height%divide
-
-        if(width_res !=0):
-            width_div=divide-width_res
-            pad_left = int(width_div/2)
-            pad_right=int(width_div-pad_left)
-        else:
-            pad_left =0
-            pad_right= 0
-
-        if(height_res !=0):
-            height_div= divide -height_res
-            pad_top =int(height_div/2)
-            pad_bottom =int(height_div -pad_top)
-        else:
-            pad_top=0
-            pad_bottom =0
-
-        padding= nn.ReflectionPad2d((pad_left,pad_right,pad_top,pad_bottom))
-        input=padding(input)
-    else:
-        pad_left=0
-        pad_right=0
-        pad_top=0
-        pad_bottom=0
-
-    height,width=input.data.shape[2],input.data.shape[3]
-
-
+    padding= nn.ReflectionPad2d((pad_left,pad_right,pad_top,pad_bottom))
+    input=padding(input)
     return input,pad_left,pad_right,pad_top,pad_bottom
-
 
 def remove_padding( input,pad_left,pad_right,pad_top,pad_bottom):
     height,width =input.shape[2],input.shape[3]
@@ -389,7 +368,7 @@ class UnetSkipConnectionBlock(nn.Module):
             #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
             up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
             down = [downconv]
-            up = [uprelu, up_conv]# ,nn.Tanh()
+            up = [uprelu, up_conv,nn.Tanh()]
             model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')

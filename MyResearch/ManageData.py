@@ -6,6 +6,12 @@ from PIL import Image
 import numpy as np
 import glob
 
+from torch import nn
+import os.path
+import torchvision.transforms as transforms
+import PIL
+from pdb import set_trace as st
+
 
 def DataLoader(opt):
     data_loader=DataLoader(opt)
@@ -75,12 +81,12 @@ class FullDataset(data.Dataset):
 
 
         input_img=A_img
-
         # We are going from a normal 600x400 image ( In the PIL format),
         #after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
-        the_gray=self.gray_transform(A_img)
-        my_A_gray= 1. - 0.5*the_gray
-        return {'A': A_img, 'B': B_img, 'A_gray': my_A_gray, 'input_img':input_img}
+        r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
+        A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2.
+        A_gray = torch.unsqueeze(A_gray, 0)
+        return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img':input_img}
 
 
 
