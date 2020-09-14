@@ -1,18 +1,10 @@
 MAJOR OVERHAUL NEEDED!!!!
 
-Dont just carry on peeling away, there needs to be substance that still remains! --> Gordon Murray!
-
-ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
-
-- Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
-
 To Do list
-- I dont need to go for full 200 epochs (Investigate on the quaality of the results at 150) Current version will be the ultimate version
-- Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
-- Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level!
-- Look into what can be done to reduce noise
 - Go through all Pytorch documentation to explore what is possible
-- What does .data do?
+
+Mention to Hairong
+- Make the setup automatic! Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level! # I cant do this because the code is on colab but the checkpoints are on Drive
 
 
 To Do
@@ -25,7 +17,6 @@ I Still need to be very scientific when I adjust certain parameters( such as cha
 
 Experiments
 - Investigate the effect of decreasing the batch size
-- vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
 - Experiment with Normal Relu and Leaky Relu in the generator?
 - Consider using batch_size=8... Dont be premature in the verdict... Read hardt carefully before making this a pacifier for everything...
 
@@ -33,8 +24,6 @@ Experiments
 Reading Up Investigation
 - Look into how Tensor and Variable works!
 - Look into the LATENT stuff for once and for all!
-
-Concrete Investigative list
 - Investigate how was the low-light images of egan formed? They seem very artificial... An example being 23_2... The sky cant be that dim... In the paper, that mention the 4 sources (2 normal) and 2 HDR sources... INVESTIGATE THIS THOROUGHLY... could help with quality of performance.
 
 
@@ -47,6 +36,7 @@ Good to know Notes
 
 
 Notes
+- I dont need to go for full 200 epochs (Investigate on the quality of the results at 150) Current version will be the ultimate version
 - Because of the proposal, I tested between  instance and batch norm... They both take the same amount of time and in terms of quality of results , I cant see anything?... If anything, I would rather go for Batch since I think it has better stabilization properties
 - Point out the lies in EnlightenGAN's paper ( That they using Unet)... I cant point fingers for the normalization aspect... They set the norm to 'instance' but dont actually use it (it is only used by other generator architectures)
 - Note that the default that they set uses Instance normalization in the generator!!! --> This has been verified

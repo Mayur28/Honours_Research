@@ -21,7 +21,7 @@ def weights_init(model): # This is optimized!!!
         torch.nn.init.constant_(model.bias.data,0.0)
 
 
-def add_padding(input): # Optimize This!!!
+def add_padding(input):# Optimized!
     height, width= input.shape[2],input.shape[3]
 
     optimal_size=512
@@ -78,8 +78,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
             self.G_optimizer=torch.optim.Adam(self.Gen.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.G_Disc_optimizer=torch.optim.Adam(self.G_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
             self.L_Disc_optimizer=torch.optim.Adam(self.L_Disc.parameters(),lr=opt.lr,betas=(opt.beta1,0.999))
-            if self.opt.phase!='train': # We shouldn't be coming here in the first place! We should directly be able to load the model...
-                self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
+            #if self.opt.phase!='train': # We shouldn't be coming here in the first place! We should directly be able to load the model...
+            #   self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
 
     def forward(self):
         # Look into what the Variable stuff is for
@@ -93,30 +93,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # What is the latent used for?
         the_input=torch.cat([self.real_img,self.real_A_gray],1)
         self.fake_B= self.Gen.forward(the_input)# We forward prop. a batch at a time, not individual images in the batch!
-        # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
-        w=self.real_A.size(3)
-        h=self.real_B.size(2)
-
-
-        # Check if there is really a need for these seperate patches
-        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
-
-        self.fake_patch_list=[]
-        self.real_patch_list=[]
-        self.input_patch_list=[]
-
-        # This will basically create 8 batches (of 16 patches each)
-        for i in range(self.opt.patchD_3):
-
-            w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
-            h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
-
-            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
-            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
-            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
-
-            # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
-           # Honestly dont think the patch stuff is really being handled in the best way right now...
 
     #Perfect
     def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
@@ -160,6 +136,31 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # The switching is now clarified as explained in the paper
         self.Gen_adv_loss= (self.model_loss(pred_real  - torch.mean(pred_fake), False) + self.model_loss(pred_fake  - torch.mean(pred_real), True)) / 2
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
+
+
+        # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
+        w=self.real_A.size(3)
+        h=self.real_B.size(2)
+
+        # Check if there is really a need for these seperate patches
+        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
+
+        self.fake_patch_list=[]
+        self.real_patch_list=[]
+        self.input_patch_list=[]
+
+        # This will basically create 8 batches (of 16 patches each)
+        for i in range(self.opt.patchD_3):
+
+            w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
+            h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
+
+            self.fake_patch_list.append(self.fake_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+            self.real_patch_list.append(self.real_B[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+            self.input_patch_list.append(self.real_A[:,:,h_offset:h_offset+self.opt.patch_size,w_offset:w_offset+self.opt.patch_size])
+
+            # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
+           # Honestly dont think the patch stuff is really being handled in the best way right now...
 
         # We are definitely switching the label here because the patches are fake but we're setting the 'target_is_real' variable to True. Look into this in accordance with MLM plus others
         accum_gen_loss=0
@@ -361,13 +362,13 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
-            #up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
-            upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            reflect = nn.ReflectionPad2d(1)
-            up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
+            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
+            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
+            #reflect = nn.ReflectionPad2d(1)
+            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
             down = [downconv]
-            up= [uprelu,upsample,reflect,up_conv,nn.Tanh()]
-            #up = [uprelu, up_conv,nn.Tanh()]
+            #up= [uprelu,upsample,reflect,up_conv,nn.Tanh()]
+            up = [uprelu, up_conv,nn.Tanh()]
             model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
             upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
