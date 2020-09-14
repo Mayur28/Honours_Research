@@ -203,10 +203,10 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         return Disc_loss
 
     def backward_G_Disc(self):
-        # Try to think carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples... Why are we doing this again? We just did something similiar when updating the generator
+        # Try to think carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples
         # It's probably just for the sequencing>>> We have to update the generator before turning our attention to the discriminator
         self.G_Disc_loss=self.backward_D_basic(self.G_Disc,self.real_B,self.fake_B,True)
-        self.G_Disc_loss.backward()# Thing about where exactly are we backpropagating this!?
+        self.G_Disc_loss.backward()
 
     def backward_L_Disc(self):
         L_Disc_loss= 0
@@ -280,10 +280,6 @@ def get_norm_layer(norm_type='instance'): # Optimize the position and the functi
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
     elif norm_type == 'instance':
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
-    elif norm_type == 'synBN':
-        norm_layer = functools.partial(SynBN2d, affine=True)
-    else:
-        raise NotImplementedError('normalization layer [%s] is not found' % norm)
     return norm_layer
 
 
@@ -359,7 +355,7 @@ class UnetSkipConnectionBlock(nn.Module):
         # Note that we we are not doing the double downsampling convolution
         downrelu = nn.LeakyReLU(0.2, True) # Look into the choice of activation function used!
         downnorm = norm_layer(inner_nc)
-        uprelu = nn.ReLU(True)
+        uprelu = nn.LeakyReLU(0.2,True)
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
@@ -403,13 +399,6 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
         else:
             no_layers=self.opt.n_layers_D
 
-
-        norm_layer=get_norm_layer(opt.norm_type)
-        if type(norm_layer) == functools.partial:  # no need to use bias as BatchNorm2d has affine parameters
-            use_bias = norm_layer.func == nn.InstanceNorm2d
-        else:
-            use_bias = norm_layer == nn.InstanceNorm2d
-
         ndf=64
         # Needs to be treated seperately (as advised by Radford - we dont apply on output of generator and input of discriminator)
         sequence=[nn.Conv2d(3,ndf,kernel_size=4,stride=2,padding=2),
@@ -424,13 +413,13 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
         for n in range(1,no_layers):
             nf_mult_prev=nf_mult
             nf_mult=min(2**n,8)
-            sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2,bias=use_bias),
+            sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=2,padding=2),
             nn.BatchNorm2d(ndf*nf_mult),
             nn.LeakyReLU(0.2,True)]
 
         nf_mult_prev=nf_mult
         nf_mult= min(2**no_layers,8)
-        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2,bias=use_bias),
+        sequence+=[nn.Conv2d(ndf*nf_mult_prev,ndf*nf_mult,kernel_size=4,stride=1,padding=2),
         nn.BatchNorm2d(ndf*nf_mult),
         nn.LeakyReLU(0.2,True)]
 

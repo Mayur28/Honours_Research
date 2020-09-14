@@ -10,6 +10,7 @@ ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
 
 
 To Do
+I Still need to be very scientific when I adjust certain parameters( such as changing from instance to batch)
 - Start looking into setting up the infrastructure for the testing environment
     Look into better ways of saving the model or fix the current version... I tried revamping it, made no change???Before making any further tries, check if my version is still usable or not!
 - Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
@@ -17,7 +18,6 @@ To Do
 - For vgg_choose, check what was the purpose of having so many different options.
 - Check what exactly is going on for the downsampling
 - Really get a grip of what is happening in my network!
-- Why was I complaining so much about the backward functions???
 - Where does the perceptual loss fit in?
 - Understand how the filters, kernels and strides are configured to achieve different things (In our case, it is just a matter of doubling the number of filters compared to the previous layer and vice versa when upsampling.)
 is achieved if placed after the activation layer. If possible, try to test both!

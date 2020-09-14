@@ -16,7 +16,7 @@ class SetupTraining():
 
         self.parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/MyResearch/', help='models are saved here')
         # Experiment with this being Batch as well!
-        self.parser.add_argument('--norm_type', type=str, default='instance', help='instance normalization or batch normalization')
+        self.parser.add_argument('--norm_type', type=str, default='batch', help='instance normalization or batch normalization')
         self.parser.add_argument('--num_downs',type=int, default=9,help=' How many U-net modules are created in the generator')
         # THe below variable is actually useless but remember the reasoning behind it!
         self.parser.add_argument('--use_ragan', default=True, action='store_true', help='use ragan')
