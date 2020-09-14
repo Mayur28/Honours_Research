@@ -282,7 +282,6 @@ def get_norm_layer(norm_type='instance'): # Optimize the position and the functi
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False)
     return norm_layer
 
-
 class MinimalUnet(nn.Module):
     def __init__(self,down=None,up=None,submodule=None,withoutskip=False,**kwargs):
         super(MinimalUnet,self).__init__()
@@ -299,15 +298,16 @@ class MinimalUnet(nn.Module):
         else: # If it is the inner-most (this would be the base case of the recursion)
             x_up = self.down(x)
 
-        print("Leftover size")
-        print((self.up(x_up)).size())
-        print("X's side")
+        print("Size of result")
+        result= self.up(x_up)
+        print(result.size())
+        print("Size of x")
         print(x.size())
 
         if self.withoutskip: # No skip connections are used for the outer layer
-            x_out = self.up(x_up)
+            x_out = result
         else:
-            x_out = (torch.cat([x,self.up(x_up)],1),mask)
+            x_out = (torch.cat([x,result],1),mask)
 
         return x_out
 
@@ -350,12 +350,9 @@ class UnetSkipConnectionBlock(nn.Module):
         super(UnetSkipConnectionBlock, self).__init__()
         input_nc=outer_nc
 
-        if type(norm_layer) == functools.partial: # This will be adjusted depending on the analysis of 'get_norm_layer'
-            use_bias = norm_layer.func == nn.InstanceNorm2d
-        else:
-            use_bias = norm_layer == nn.InstanceNorm2d
 
-        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,stride=2, padding=1,bias=use_bias) # The 3 is from looking at the encoder decoder approach
+
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,stride=2, padding=1) # The 3 is from looking at the encoder decoder approach
                              # Look into this!
         # Note that we we are not doing the double downsampling convolution
         downrelu = nn.LeakyReLU(0.2, True) # Look into the choice of activation function used!
@@ -364,28 +361,25 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
             up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
+            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             down = [downconv]
+            #up= [uprelu,upsample,nn.Tanh()] #,reflect,up_conv,
             up = [uprelu, up_conv,nn.Tanh()]
             model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(inner_nc,int(0.5*outer_nc),kernel_size=4, stride=1, padding=0)
-            up_conv= nn.ConvTranspose2d(inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
+            upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             down = [downrelu, downconv]
-            up = [uprelu,up_conv,upnorm]
+            up= [uprelu,upsample,upnorm]
             model = MinimalUnet(down,up)
         else:
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
+            upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
+            reflect = nn.ReflectionPad2d(1)
+            up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
+            #up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
+            up= [uprelu,upsample,reflect,up_conv,upnorm]
             down = [downrelu, downconv,downnorm]
-            up = [uprelu,up_conv,upnorm]
+            #up = [uprelu,up_conv,upnorm]
 
             model = MinimalUnet(down,up,submodule)
 
@@ -393,6 +387,7 @@ class UnetSkipConnectionBlock(nn.Module):
 
     def forward(self,x,mask=None):
         return self.model(x,mask)
+
 
 class PatchGAN(nn.Module):
     def __init__(self,opt,patch):
@@ -441,7 +436,6 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
 		#This is to stabilize training
 
     def compute_vgg_loss(self,vgg_network,image,target):
-        print(image.shape)
         image_vgg=vgg_preprocess(image)
         target_vgg=vgg_preprocess(target)
         # The is precisely where we are calling forward on the vgg network
