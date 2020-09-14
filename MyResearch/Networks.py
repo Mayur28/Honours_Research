@@ -389,7 +389,7 @@ class UnetSkipConnectionBlock(nn.Module):
     def forward(self,x,mask=None):
         return self.model(x,mask)
 
-class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is absolutely "textbook stuff"
+class PatchGAN(nn.Module):
     def __init__(self,opt,patch):
         super(PatchGAN, self).__init__()
 
@@ -403,11 +403,7 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
         # Needs to be treated seperately (as advised by Radford - we dont apply on output of generator and input of discriminator)
         sequence=[nn.Conv2d(3,ndf,kernel_size=4,stride=2,padding=2),
         nn.LeakyReLU(0.2,True)]
-        # The rubbish below can be modified!
-        # Filter out this rubbish ( Warning 1 - its the simple input output procedure)
-        # Output collapses from 512 - 1... Check what does the 1 activation map represent
-        # Needs to be completely restructured according to Radford
-        # Look at flagship papers, as well as morphing EGAN's alternate implementations and get ideas from other papers
+
         nf_mult=1
         nf_mult_prev=1
         for n in range(1,no_layers):
@@ -476,7 +472,7 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
         self.conv5_2=nn.Conv2d(512,512,kernel_size=3,stride=1,padding=1)
         self.conv5_3=nn.Conv2d(512,512,kernel_size=3,stride=1,padding=1)
 
-    def forward(self,input,opt):
+    def forward(self,input):
 
         # Alot over variation can come out of this function
         #Check how and when this is called!
