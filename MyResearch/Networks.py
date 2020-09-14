@@ -441,8 +441,9 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
         image_vgg=vgg_preprocess(image)
         target_vgg=vgg_preprocess(target)
 
-        img_feature_map=vgg_network(image_vgg,self.opt)# Get the feature map of the input image
-        target_feature_map=vgg_network(target_vgg,self.opt)# Get the feature of the target image
+        # The is precisely where we are calling forward on the vgg network
+        img_feature_map=vgg_network(image_vgg)# Get the feature map of the input image
+        target_feature_map=vgg_network(target_vgg)# Get the feature of the target image
 
         return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2)# --> According to the provided function
 
@@ -474,8 +475,6 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
 
     def forward(self,input):
 
-        # Alot over variation can come out of this function
-        #Check how and when this is called!
         act=F.relu(self.conv1_1(input),inplace=True)
         act=F.relu(self.conv1_2(act),inplace=True)
         act=F.max_pool2d(act,kernel_size=2,stride=2)

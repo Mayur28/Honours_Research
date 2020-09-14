@@ -2,22 +2,25 @@ MAJOR OVERHAUL NEEDED!!!!
 
 Dont just carry on peeling away, there needs to be substance that still remains! --> Gordon Murray!
 
-
-I'm now starting a THOROUGH POLISH!!!!
 ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
 
 - Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
 
+To Do list
+- Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
+- Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level!
+- Look into what can be done to reduce noise
+- Check again if I should decay the learning rate? What are others doing?--> Check isola and others MaskShadowGAN
+- Go through all Pytorch documentation to explore what is possible
+- What does .data do?
+
 
 To Do
+TESTING
 I Still need to be very scientific when I adjust certain parameters( such as changing from instance to batch)
     I tested between  instance and batch norm... They both take the same amount of time and in terms of quality of results , I cant see anything?... If anything, I would rather go for Batch since I think it has better stabilization properties
 - Start looking into setting up the infrastructure for the testing environment
     Look into better ways of saving the model or fix the current version... I tried revamping it, made no change???Before making any further tries, check if my version is still usable or not!
-- Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
-- For vgg_choose, check what was the purpose of having so many different options.
-- Where does the perceptual loss fit in?
-
 
 
 Experiments
@@ -27,23 +30,8 @@ Experiments
 - Consider using batch_size=8... Dont be premature in the verdict... Read hardt carefully before making this a pacifier for everything...
 
 
-Few Minutes
-- Check if it is always the case that we set affine to False for InstanceNorm2d?
-- (Change the 'help' eventually!) in Setup Training
-- Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level!
-
-
 Reading Up Investigation
-- Check again if I should decay the learning rate? What are others doing?--> Check isola and  others MaskShadowGAN
 - Look into how Tensor and Variable works!
-- Extract alot of variation from the VGG network
-- If possible look into variation in the Perceptual Loss
-- Look into what can be done to reduce noise
-- The PatchGAN now has BatchNormalization (WITH BIASES, ONCE THE COLOR BIAS IS SORTED OUT, CHECK IF THIS NORM BIAS IS NECESSARY OR NOT)
-- READ THE LATEST COLLECTIONS OF ARTICLES AS POSSIBLE  TO GAIN A DEEP UNDERSTANDING
-- Try looking into instance noise which adds noise to the real and synthetic samples They used additive gaussian noise ... Variance needs to decrease over time
-- Go through all Pytorch documentation to explore what is possible
-- What does .data do?
 - Look into the LATENT stuff for once and for all!
 
 Concrete Investigative list
