@@ -7,10 +7,10 @@ ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
 - Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
 
 To Do list
+- I dont need to go for full 200 epochs (Investigate on the quaality of the results at 150) Current version will be the ultimate version
 - Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
 - Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level!
 - Look into what can be done to reduce noise
-- Check again if I should decay the learning rate? What are others doing?--> Check isola and others MaskShadowGAN
 - Go through all Pytorch documentation to explore what is possible
 - What does .data do?
 
@@ -35,46 +35,36 @@ Reading Up Investigation
 - Look into the LATENT stuff for once and for all!
 
 Concrete Investigative list
-- The code seems to be very sensitive to the version of Pytorch used! The gray_transform was a mission (more particularly A-Img to Grayscale(with one channel))
 - Investigate how was the low-light images of egan formed? They seem very artificial... An example being 23_2... The sky cant be that dim... In the paper, that mention the 4 sources (2 normal) and 2 HDR sources... INVESTIGATE THIS THOROUGHLY... could help with quality of performance.
-- Experiment the effect when instance normalization is used
-- vgg_choose will be set to relu5_1. Remove the if-statements in networks.py--> Check why was this option used
+
+
+Good to know Notes
+- Experiment the effect when instance normalization is used...  Not much of a difference (in terms of quality of results and runtime)
 - I need to thoroughly understand the difference between a normal GAN, using MSE loss and LSGAN( I am using an LSGAN)... Look into why this is a good choice!
-- Check why is a 13x13 grid produced by the discriminator for each image in the batch ( Dont doubt this) Get Mines in line with Isola
-- Why was relu5_1 used for the VGG network?
+- The code seems to be very sensitive to the version of Pytorch used! The gray_transform was a mission (more particularly A-Img to Grayscale(with one channel))
+- It is now verified that it was the 0.0002 lr that caused the weird effects
 
-
-FIND OUT FROM HAIRONG
-I tested between  instance and batch norm... They both take the same amount of time and in terms of quality of results , I cant see anything?... If anything, I would rather go for Batch since I think it has better stabilization properties
 
 
 Notes
+- Because of the proposal, I tested between  instance and batch norm... They both take the same amount of time and in terms of quality of results , I cant see anything?... If anything, I would rather go for Batch since I think it has better stabilization properties
 - Point out the lies in EnlightenGAN's paper ( That they using Unet)... I cant point fingers for the normalization aspect... They set the norm to 'instance' but dont actually use it (it is only used by other generator architectures)
 - Note that the default that they set uses Instance normalization in the generator!!! --> This has been verified
     ToDo: Try with batch normalization
 - If I do get the speedup, make sure I compare the size of my network to Official EGAN!
 - For comparison, compare to paired approaches and consider below option
     Look at FID for evaluating the results (Read the Pytorch implementation of CycleGan by Chinese Isola)
-- It is now verified that it was the 0.0002 lr that caused the weird effects
 - Ragan is the relativistic discriminator used for the global generator and discriminator only (this is where we are swapping the labels)
-- From a performance perspective, I am capable of achieving about 76 sec epochs in the bare bones approach, although, performance should'nt be made the only priority... EGAN's default is 87 seconds... Mention the tradeoff of speed and quality
 - Note the pattern for the number of filters used in the generator, when downsampling, the number of filters doubles. When upsampling, the number of filters is halved. Additionally, The number of filters is equal in mirrored layers (for example. the first layer has the sample number of filters as the last layer.)
 - Very important, we do not perform normalization in the first layer of the generator. (needs to be accounted for seperately, the rest can be produced algorithmically)--> EGAN has an extra layer and does not use normalization which shouldn't primarily determine the performance of the entire algorithm.
 - My understanding of EGAN is slightly flawed. I thought EGAN primarily uses instance normalization which isnt the case. Instead, it primarily uses batch norm but uses instance norm before the VGG for stability
-- The discriminator is built algorithmically by defining a batch and using it as many times that is specified(n_layers_D)
 - The dataloader loads the data into batches ( and pretty much handles all the data handling) by using the GPU. LOOK INTO THE DATALOADER STUFF THOROUGHLY!! To use the dataloader stuff, it is compulsory to implement the __getitem__ and __len__ magic functions
 - The 'data' training loop is a dictionary where each element is a tensor (with dimensions 16x3xsizexsize). These tensors represent A,B,input_A_gray and input_imgs. It also stores 'A_paths' which is the path to the training images accessed in that batch. Go deeper into how this dictionary is actually formed using the data loader.
 - Remember, single model is the grand network which contains the generator and the discriminator. (we are working with an instance of 'single model'). That is why in 'optimize_parameters', we only calling forward() once which will propagate through the generator and the discriminator.  Note that we are doing the alternating training batches thing as mentioned by Radford.
 - The __getitems__ function in unaligned_dataset is called each iteration and is used to form the dictionary form of the batch with the A,B,input image and attention map!
-I changed DataParallel (towards the end of the definition of the generator and the discriminator) because at the moment, I'm only using one GPU.This function basically chunks the input across all the GPU's (uncomment if Shun makes a plan)
-- When they say that they concatenate and reshaping the attention maps to the filter size, we actually do this in the decoder( get multiplied when we are upsampling)
-- When I want to see the latent stuff, the attention map and the patchs, uncomment the original dictionary setting.
 - It appears that the output is formed by multiplying the latent image with the low-light image.
-- Mask- Shadow GAN has it like original paper (opposite to EGAN) : They put Norm. before Relu????
 - The LSGAN can be implemented by using the target values of 1.0 for real and 0.0 for fake images and optimizing the model using the mean squared error (MSE) loss function, e.g. L2 loss. The output layer of the discriminator model must be a linear activation function.
-- Check if there is a resize function in single_model.py ( There isn't in the entire project. Note that looking at the base_dataset, it accepts torch.utils.data which is built-in and explicitly specifies that egt_im and len need to be overwritten). the 'resize_' function is a built-in tensor function.
 - The type/ form of training data can have a huge impact on what the GAN achieves
-- Find out the following from Richard: Find out the following: Its usually Conv->Batch-> Relu but here its Conv-> Relu->Batch. Answer! MLM states that this is not an issue. Org. paper has it like normal but experimentation revealed that better perf.
 
 LSGAN notes
 - The blog post is intuitive...
@@ -86,6 +76,7 @@ LSGAN notes
 
 
 Notes for the Report:
+- Must compare the size of  my network to EGAN... Yes, mines does take longer, but my network is twice as big and only 5-6 seconds longer
 - When writing the report, explain the effect of varying every single parameter individually! ( If it seems right!)
 - Talk about using the transpose convolution which gave checkerboard effects, therefore, I'm going to consider some form of interpolation then performing a convolution
 - For the report, I should definitely include a diagram of the architecture since she specifically asked for it ( but it needs to be indistinguishable from Enlighten-GAN!)

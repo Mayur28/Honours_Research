@@ -22,15 +22,12 @@ def config_transforms(opt):
     trans_list=[]
     # For data augmentation, perform random cropping, sometimes horizontal flipping, sometimes vertical flipping and finalize normalize( to range [-1,1])
     trans_list+=[transforms.RandomCrop(opt.crop_size),
-    transforms.RandomHorizontalFlip(p=0.35),
-    transforms.RandomVerticalFlip(p=0.35),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomVerticalFlip(p=0.5),
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
     return transforms.Compose(trans_list)
 
-def the_gray_transform():
-    trans=[transforms.ToPILImage(),transforms.Grayscale(1),transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))]
-    return transforms.Compose(trans)
 
 class DataLoader:
     def __init__(self,opt):
@@ -55,15 +52,12 @@ class FullDataset(data.Dataset):
         A_directory=os.path.join('../final_dataset',opt.phase+'A')
         B_directory=os.path.join('../final_dataset',opt.phase+'B')
 
-
         self.A_imgs = import_dataset(A_directory)
         self.B_imgs = import_dataset(B_directory)
-
 
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)
-        self.gray_transform=the_gray_transform()
 
     def __getitem__(self,index):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
@@ -77,7 +71,7 @@ class FullDataset(data.Dataset):
         # We are going from a normal 600x400 image ( In the PIL format),
         #after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
         r,g,b = input_img[0]+1, input_img[1]+1, input_img[2]+1
-        A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2.
+        A_gray = 1. - (0.299*r+0.587*g+0.114*b)/2. # This is definitely the best way... My way only worked for an older version of torch
         A_gray = torch.unsqueeze(A_gray, 0)
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img':input_img}
 

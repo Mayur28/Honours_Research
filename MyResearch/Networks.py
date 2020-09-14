@@ -53,7 +53,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.input_img=torch.cuda.FloatTensor(opt.batch_size,3,opt.crop_size,opt.crop_size)
         self.input_A_gray=torch.cuda.FloatTensor(opt.batch_size,1,opt.crop_size,opt.crop_size)# this is for the attention maps
 
-        self.vgg_loss=PerceptualLoss(opt)
+        self.vgg_loss=PerceptualLoss()
         self.vgg_loss.cuda()#--> Shift to the GPU
 
         self.vgg=load_vgg(self.opt.gpu_ids)#This is for data parallelism
@@ -61,7 +61,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         #The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makes sense)
         #I'm setting it to eval() because it's not being trained in anyway
 
-        for weights in self.vgg.parameters():# THIS IS THE BEST WHY OF DOING THIS
+        for weights in self.vgg.parameters():# THIS IS THE BEST WAY OF DOING THIS
             weights.requires_grad = False# Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
 
         # Above looks optimized
@@ -429,9 +429,8 @@ class PatchGAN(nn.Module):
 
 
 class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and have a forward() function
-    def __init__(self,opt):
+    def __init__(self):
         super(PerceptualLoss,self).__init__()
-        self.opt=opt
         self.instance_norm=nn.InstanceNorm2d(512,affine=False)# <-- Affine determines if some of the parameters for normalizing are "learnable" or not.
         #512 is the number of features
 		#This is to stabilize training
@@ -440,15 +439,14 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
         print(image.shape)
         image_vgg=vgg_preprocess(image)
         target_vgg=vgg_preprocess(target)
-
         # The is precisely where we are calling forward on the vgg network
         img_feature_map=vgg_network(image_vgg)# Get the feature map of the input image
         target_feature_map=vgg_network(target_vgg)# Get the feature of the target image
 
-        return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2)# --> According to the provided function
+        return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2)# The actual Perceptual Loss calculation
 
 
-class Vgg(nn.Module): # optimize this, There should surely be some variations to this.. Understand what is trying to be achieved and then determine how to go about achieving this!
+class Vgg(nn.Module):
 
     def __init__(self):
         super(Vgg,self).__init__()
@@ -496,7 +494,6 @@ class Vgg(nn.Module): # optimize this, There should surely be some variations to
         return relu5_1
 
 
-#There is a lot of room for variation here
 def vgg_preprocess(batch):
     tensortype = type(batch.data)
     (r, g, b) = torch.chunk(batch, 3, dim = 1)
