@@ -11,16 +11,12 @@ ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
 
 To Do
 I Still need to be very scientific when I adjust certain parameters( such as changing from instance to batch)
+    I tested between  instance and batch norm... They both take the same amount of time and in terms of quality of results , I cant see anything?... If anything, I would rather go for Batch since I think it has better stabilization properties
 - Start looking into setting up the infrastructure for the testing environment
     Look into better ways of saving the model or fix the current version... I tried revamping it, made no change???Before making any further tries, check if my version is still usable or not!
 - Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
-
 - For vgg_choose, check what was the purpose of having so many different options.
-- Check what exactly is going on for the downsampling
-- Really get a grip of what is happening in my network!
 - Where does the perceptual loss fit in?
-- Understand how the filters, kernels and strides are configured to achieve different things (In our case, it is just a matter of doubling the number of filters compared to the previous layer and vice versa when upsampling.)
-is achieved if placed after the activation layer. If possible, try to test both!
 
 
 
@@ -60,8 +56,12 @@ Concrete Investigative list
 - Why was relu5_1 used for the VGG network?
 
 
+FIND OUT FROM HAIRONG
+I tested between  instance and batch norm... They both take the same amount of time and in terms of quality of results , I cant see anything?... If anything, I would rather go for Batch since I think it has better stabilization properties
+
+
 Notes
-- Point out the lies in EnlightenGAN's paper
+- Point out the lies in EnlightenGAN's paper ( That they using Unet)... I cant point fingers for the normalization aspect... They set the norm to 'instance' but dont actually use it (it is only used by other generator architectures)
 - Note that the default that they set uses Instance normalization in the generator!!! --> This has been verified
     ToDo: Try with batch normalization
 - If I do get the speedup, make sure I compare the size of my network to Official EGAN!

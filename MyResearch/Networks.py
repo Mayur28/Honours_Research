@@ -28,11 +28,11 @@ def add_padding(input): # Optimize This!!!
     pad_left = pad_right = pad_top= pad_bottom= 0
     if(width!=optimal_size):
         width_diff= optimal_size-width
-        pad_left= np.ceil(width_diff/2)
+        pad_left= int(np.ceil(width_diff/2))
         pad_right= width_diff-pad_left
     if(height!=optimal_size):
         height_diff=optimal_size-height
-        pad_top= np.ceil(height_diff/2)
+        pad_top= int(np.ceil(height_diff/2))
         pad_bottom= height_diff-pad_top
 
     padding= nn.ReflectionPad2d((pad_left,pad_right,pad_top,pad_bottom))
@@ -441,10 +441,9 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
 		#This is to stabilize training
 
     def compute_vgg_loss(self,vgg_network,image,target):
-        #print(image.shape)
-        image_vgg=vgg_preprocess(image)#cv2.normalize(image,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(image,self.opt)--> This function was supposed to convert the RGB image to BGR and convert the normalized image [-1,1] from the tanh function to [0,255]... Im removing it now, but check ifit is really necessary to change the range.
-        target_vgg=vgg_preprocess(target)#cv2.normalize(target,None,alpha=0,beta=255,norm_type=cv2.NORM_MINMAX)#vgg_preprocess(target,self.opt)
-        # Check if there is a work around this!
+        print(image.shape)
+        image_vgg=vgg_preprocess(image)
+        target_vgg=vgg_preprocess(target)
 
         img_feature_map=vgg_network(image_vgg,self.opt)# Get the feature map of the input image
         target_feature_map=vgg_network(target_vgg,self.opt)# Get the feature of the target image
@@ -453,7 +452,6 @@ class PerceptualLoss(nn.Module):# All NN's needed to be based on this class and 
 
 
 class Vgg(nn.Module): # optimize this, There should surely be some variations to this.. Understand what is trying to be achieved and then determine how to go about achieving this!
-
 
     def __init__(self):
         super(Vgg,self).__init__()
