@@ -113,16 +113,13 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.forward()# This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
         self.G_optimizer.zero_grad()# Check the positioning of this statement (can it be first?)
         self.backward_G()
-
         self.G_optimizer.step()
 
         # Now onto updating the discriminator!
         self.G_Disc_optimizer.zero_grad()
         self.backward_G_Disc()
-
         self.L_Disc_optimizer.zero_grad()
         self.backward_L_Disc()
-
         self.G_Disc_optimizer.step()
         self.L_Disc_optimizer.step()
 
@@ -167,12 +164,15 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         pred_fake_patch_list= 0
         #Perform the predictions on the list of patches
         for i in range(self.opt.patchD_3):
+            w_offset=random.randint(0,max(0,w-self.opt.patch_size-1))
+            h_offset=random.randint(0,max(0,h-self.opt.patch_size-1))
+
             pred_fake_patch_list=self.L_Disc.forward(self.fake_patch_list[i])# Just check what is the shape of pred_fake_patch_list? Is it a single image or a batch?
 
             accum_gen_loss+=self.model_loss(pred_fake_patch_list,True)
         #Check if the below statement is really necessary( the dividing part)
         self.Gen_adv_loss+= accum_gen_loss/float(self.opt.patchD_3)
-        # This now contains the loss from propagting the entire image and now, we're adding the average loss from all the fake patchs
+        # This now contains the loss from propagating the entire image and now, we're adding the average loss from all the fake patchs
 
         # Check if we use the other patch lists
         self.total_vgg_loss=self.vgg_loss.compute_vgg_loss(self.vgg,self.fake_B,self.real_A)*1.0 # This the vgg loss for the entire images!
@@ -194,7 +194,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
 
         # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
-        if(use_ragan): # Ragan is the relivistic discriminator! This label switching coincides with the paper
+        if(use_ragan): # Ragan is the relivistic discriminator! This label switching coincides with the paper. This is only used by the global discriminator
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
             self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
         else:
@@ -204,8 +204,6 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         return Disc_loss
 
     def backward_G_Disc(self):
-        # Try to think carefully about why are we're in doing the following... We're training the discriminator using the 'real' (normal light images) and the fake samples
-        # It's probably just for the sequencing>>> We have to update the generator before turning our attention to the discriminator
         self.G_Disc_loss=self.backward_D_basic(self.G_Disc,self.real_B,self.fake_B,True)
         self.G_Disc_loss.backward()
 
@@ -230,7 +228,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
     def for_displaying_images(self):# Since self.realA_ was declared as a Variable, .data extracts the tensor of the variable.
         real_A=TensorToImage(self.real_A.data)# The low-light image (which is also our input image)
         fake_B=TensorToImage(self.fake_B.data)# Our produced result
-        # What does the .data do?
+        # What does the .data do? .data refrains from computing the gradient
         self_attention= TensorToImage(self.real_A_gray.data)
         return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
@@ -247,10 +245,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.save_network(self.L_Disc,'Local_Disc',label)
 
 
-
 def make_G(opt):
-    norm_layer=get_norm_layer(opt.norm_type)
-    generator=UnetGenerator(9, opt)
+    generator=UnetGenerator(opt)
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -325,7 +321,7 @@ class UnetGenerator(nn.Module): # Perfect
         norm_type=get_norm_layer(opt.norm_type)
         # construct unet structure
         unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=None,position='innermost', norm_layer=norm_type)
-        for i in range(num_downs - 5):
+        for i in range(opt.num_downs - 5):
             unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8,submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8,submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, submodule=unet_block, norm_layer=norm_type)
@@ -353,8 +349,7 @@ class UnetSkipConnectionBlock(nn.Module):
 
 
 
-        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,stride=2, padding=1) # The 3 is from looking at the encoder decoder approach
-                             # Look into this!
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=3,padding=1) # The 3 is from looking at the encoder decoder approach
         # Note that we we are not doing the double downsampling convolution
         downrelu = nn.LeakyReLU(0.2, True) # Look into the choice of activation function used!
         downnorm = norm_layer(inner_nc)
@@ -362,7 +357,7 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
+            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=3,padding=1)
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
             #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
@@ -376,13 +371,14 @@ class UnetSkipConnectionBlock(nn.Module):
             up= [uprelu,upsample,upnorm]
             model = MinimalUnet(down,up)
         else:
-            upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            reflect = nn.ReflectionPad2d(1)
-            up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
-            #up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
-            up= [uprelu,upsample,reflect,up_conv,upnorm]
+            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
+            #reflect = nn.ReflectionPad2d(1)
+            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
+            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
+            #up= [uprelu,upsample,reflect,up_conv,upnorm]
+            up = [uprelu,up_conv,upnorm]
             down = [downrelu, downconv,downnorm]
-            #up = [uprelu,up_conv,upnorm]
+
 
             model = MinimalUnet(down,up,submodule)
 
