@@ -30,7 +30,7 @@ def config_transforms(opt):
     return transforms.Compose(trans_list)
 
 def the_gray_transform():
-    trans=[transforms.ToPILImage(),transforms.Grayscale(3),transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))]
+    trans=[transforms.ToPILImage(),transforms.Grayscale(1),transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5),(0.5,0.5,0.5))]
     return transforms.Compose(trans)
 
 class DataLoader:

@@ -389,7 +389,7 @@ class UnetSkipConnectionBlock(nn.Module):
             #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=4, stride=1, padding=0)
             up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
             down = [downconv]
-            up = [uprelu, up_conv,nn.Tanh()]
+            up = [uprelu, up_conv]# ,nn.Tanh()
             model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
@@ -424,6 +424,8 @@ class PatchGAN(nn.Module): # Make sure the configuration of the PatchGAN is abso
         else:
             no_layers=self.opt.n_layers_D
 
+
+        norm_layer=get_norm_layer(opt.norm_type)
         if type(norm_layer) == functools.partial:  # no need to use bias as BatchNorm2d has affine parameters
             use_bias = norm_layer.func == nn.InstanceNorm2d
         else:
