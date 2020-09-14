@@ -6,13 +6,6 @@ from PIL import Image
 import numpy as np
 import glob
 
-from torch import nn
-import os.path
-import torchvision.transforms as transforms
-import PIL
-from pdb import set_trace as st
-
-
 def DataLoader(opt):
     data_loader=DataLoader(opt)
     return data_loader
@@ -93,11 +86,8 @@ class FullDataset(data.Dataset):
     def __len__(self):
         return max(self.A_size,self.B_size)
 
-# Right now, this is directly copied over, NEEDS TO BE REDONE URGENTLY!!!
-# Improve the implementation here( vast amount of rom from improvement here!)
-# Look at VGG preprocess on how to convert from [-1,1] to [0,255]
-def TensorToImage(img_tensor,imtype=np.uint8):
-    usable_images=img_tensor[0].cpu().float().numpy()
-    usable_images=(np.transpose(usable_images, (1, 2, 0)) + 1) / 2.0 * 255.0
-    usable_images=np.clip(usable_images,0,255)
-    return usable_images.astype(imtype)
+def TensorToImage(img_tensor):
+    for_disp=img_tensor[0].cpu().float().numpy()
+    for_disp=(np.transpose(for_disp, (1, 2, 0)) + 1) / 2.0 * 255.0
+    for_disp=np.clip(for_disp,0,255)
+    return for_disp.astype(np.uint8)

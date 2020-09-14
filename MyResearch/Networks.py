@@ -7,7 +7,7 @@ from ManageData import TensorToImage
 import os
 from collections import OrderedDict
 import functools
-
+import numpy as np
 
 
 # Check what would be the story when testing? Would the networks below be created( sound silly but isnt!)
@@ -28,7 +28,7 @@ def add_padding(input): # Optimize This!!!
     pad_left = pad_right = pad_top= pad_bottom= 0
     if(width!=optimal_size):
         width_diff= optimal_size-width
-        pad_left= numpy.ceil(width_diff/2)
+        pad_left= np.ceil(width_diff/2)
         pad_right= width_diff-pad_left
     if(height!=optimal_size):
         height_diff=optimal_size-height

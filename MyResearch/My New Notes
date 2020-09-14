@@ -6,7 +6,6 @@ Dont just carry on peeling away, there needs to be substance that still remains!
 I'm now starting a THOROUGH POLISH!!!!
 ALL QUESTIONS POSSIBLE AND QUESTIONING EVERYTHING
 
-- Optimize the padding functions
 - Make the setup automatic- Find A way to adaptively set the checkpoint directly without needing to set it ( this is only applicable when executed locally)
 
 
@@ -14,7 +13,6 @@ To Do
 - Start looking into setting up the infrastructure for the testing environment
     Look into better ways of saving the model or fix the current version... I tried revamping it, made no change???Before making any further tries, check if my version is still usable or not!
 - Try to get the network more efficient!!! 100 secs is unacceptable, although, dont compromise quality of results
-- Fix the 'ToImage' functions (right now, they are directly copied over)
 
 - For vgg_choose, check what was the purpose of having so many different options.
 - Check what exactly is going on for the downsampling
