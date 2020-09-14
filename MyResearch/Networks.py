@@ -347,9 +347,8 @@ class UnetSkipConnectionBlock(nn.Module):
         super(UnetSkipConnectionBlock, self).__init__()
         input_nc=outer_nc
 
-
-
-        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=3,padding=1) # The 3 is from looking at the encoder decoder approach
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,stride=2, padding=1) # The 3 is from looking at the encoder decoder approach
+                             # Look into this!
         # Note that we we are not doing the double downsampling convolution
         downrelu = nn.LeakyReLU(0.2, True) # Look into the choice of activation function used!
         downnorm = norm_layer(inner_nc)
@@ -357,7 +356,7 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=3,padding=1)
+            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
             #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
             #reflect = nn.ReflectionPad2d(1)
             #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
@@ -366,19 +365,18 @@ class UnetSkipConnectionBlock(nn.Module):
             up = [uprelu, up_conv,nn.Tanh()]
             model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
-            upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
+            upsample=nn.UpsamplingBilinear2d(scale_factor=2)
             down = [downrelu, downconv]
             up= [uprelu,upsample,upnorm]
             model = MinimalUnet(down,up)
         else:
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
-            #up= [uprelu,upsample,reflect,up_conv,upnorm]
-            up = [uprelu,up_conv,upnorm]
+            upsample=nn.UpsamplingBilinear2d(scale_factor=2)
+            reflect = nn.ReflectionPad2d(1)
+            up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
+            #up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1,bias=use_bias)
+            up= [uprelu,upsample,reflect,up_conv,upnorm]
             down = [downrelu, downconv,downnorm]
-
+            #up = [uprelu,up_conv,upnorm]
 
             model = MinimalUnet(down,up,submodule)
 
