@@ -246,7 +246,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
 def make_G(opt):
-    generator=UnetGenerator()
+    generator=UnetGenerator(opt)
     generator.cuda(device=opt.gpu_ids[0])# jackpot! We see that the model is loaded to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)# We only need this when we have more than one GPU
     generator.apply(weights_init)# The weight initialization
@@ -314,7 +314,7 @@ class MinimalUnet(nn.Module):
 # if |num_downs| == 7, image of size 128x128 will become of size 1x1
 # at the bottleneck
 class UnetGenerator(nn.Module): # Perfect
-    def __init__(self):
+    def __init__(self,opt):
         ngf=64
         super(UnetGenerator, self).__init__()
 
