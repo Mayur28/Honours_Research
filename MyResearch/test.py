@@ -9,7 +9,7 @@ from PIL import Image
 def display_current_results(images,title,phase='train'): # Perfect
     the_title= title.split('.')
     for label,image in images.items():# .items() extracts the "packages" from the dictionary
-        img_path=os.path.join(opt.img_dir,'NEW -%s.png'%(the_title[0],label)) #
+        img_path=os.path.join(opt.img_dir,'NEW -%s_%s.png'%(the_title[0],label)) #
         image_pil=Image.fromarray(image)
         image_pil.save(img_path)
 
