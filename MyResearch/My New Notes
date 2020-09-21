@@ -6,6 +6,7 @@ To Do list
 Mention to Hairong
 - Make the setup automatic! Remove the need for explicitly specifying the checkpoint directory... Just create at a certain level! # I cant do this because the code is on colab but the checkpoints are on Drive
 
+# There is a tiny blurring effect... Experiment with the configuration in Minimal Unet... Which is Transpose and which is fancy (plus the kernel_size,stride and padding config)
 
 To Do
 TESTING

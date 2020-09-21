@@ -314,7 +314,7 @@ class MinimalUnet(nn.Module):
 # if |num_downs| == 7, image of size 128x128 will become of size 1x1
 # at the bottleneck
 class UnetGenerator(nn.Module): # Perfect
-    def __init__(self, num_downs,opt):
+    def __init__(self,opt):
         ngf=64
         super(UnetGenerator, self).__init__()
 
