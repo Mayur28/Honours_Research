@@ -1,4 +1,4 @@
-from SetupTraining import SetupTraining
+from SetupTraining import *
 from ManageData import DataLoader
 from PIL import Image
 import Networks
@@ -21,7 +21,7 @@ def print_errors(epoch,i,errors,t):
         log_file.write('%s\n' % message)
 
 
-opt=SetupTraining().process()
+opt=process(TrainingSetup(DefaultSetup()))
 data_loader=DataLoader(opt)
 dataset=data_loader.load()
 print("Number of training images: %d"% len(data_loader))
