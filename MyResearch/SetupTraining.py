@@ -74,7 +74,7 @@ def process(the_args): # I dont need to be printing the display and other useles
         opt_file.write('-------------- End ----------------\n')
         print('-------------- End ----------------')
 
-    web_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web')
+    opt.web_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web')
     opt.img_dir = os.path.join(opt.web_dir, 'images')
     print('create web directory %s...' % opt.web_dir)
     if(os.path.isdir(opt.web_dir)==False):
