@@ -31,6 +31,7 @@ def DefaultSetup():
 def TrainingSetup(the_args):
     # EGAN used 0.0001 but Radford recommended 0.0002
     # Below does not need to be printed
+    the_args.add_argument('--data_source', required=True,default='../final_dataset', help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
     the_args.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
     the_args.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
     the_args.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')
@@ -40,8 +41,13 @@ def TrainingSetup(the_args):
     the_args.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
     the_args.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
     the_args.add_argument('--lr', type=float, default=0.00015, help='initial learning rate for adam')
-
     return the_args
+
+def TestingSetup(the_args):
+    the_args.add_argument('--data_source', required=True,default='../final_dataset', help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
+    the_args.add_argument('--batch_size', type=int, default=1, help='input batch size (One of the aspects that can be used to control GPU requirements)')
+
+
 
 def process(the_args): # I dont need to be printing the display and other useless information
     opt = the_args.parse_args()

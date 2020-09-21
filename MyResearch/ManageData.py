@@ -33,7 +33,11 @@ class DataLoader:
     def __init__(self,opt):
         self.opt=opt
         self.dataset=FullDataset(opt)# Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
-        self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, pin_memory=True,num_workers=6)
+        if opt.train:
+            self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, pin_memory=True,num_workers=6)
+        else:
+            self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= False, pin_memory=True,num_workers=1)
+
 
     def load(self):# This will return the iterable over the dataset
         return self.dataloader
@@ -49,8 +53,8 @@ class FullDataset(data.Dataset):
         super(FullDataset, self).__init__()
         self.opt=opt
         #Form the path's to the data
-        A_directory=os.path.join('../final_dataset',opt.phase+'A')
-        B_directory=os.path.join('../final_dataset',opt.phase+'B')
+        A_directory=os.path.join(opt.data_source,opt.phase+'A')
+        B_directory=os.path.join(opt.data_source,opt.phase+'B')
 
         self.A_imgs = import_dataset(A_directory)
         self.B_imgs = import_dataset(B_directory)
