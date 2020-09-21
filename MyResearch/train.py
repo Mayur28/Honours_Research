@@ -7,16 +7,11 @@ import os
 
 
 def display_current_results(images,title,phase='train'): # Perfect
-    if phase=='train':
-        for label,image in images.items():# .items() extractes the "packages" from the dictionary
-            img_path=os.path.join(opt.img_dir,'epoch%.3d_%s.png'%(title,label))
-            image_pil=Image.fromarray(image)
-            image_pil.save(img_path)
-    else:
-        for label,image in images.items():# .items() extracts the "packages" from the dictionary
-            img_path=os.path.join(opt.img_dir,'NEW -%s %s.png'%(title,label))
-            image_pil=Image.fromarray(image)
-            image_pil.save(img_path)
+    for label,image in images.items():# .items() extractes the "packages" from the dictionary
+        img_path=os.path.join(opt.img_dir,'epoch%.3d_%s.png'%(title,label))
+        image_pil=Image.fromarray(image)
+        image_pil.save(img_path)
+
 
 
 def print_errors(epoch,i,errors,t):

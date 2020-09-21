@@ -247,7 +247,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         fake_B=TensorToImage(self.fake_B.data)# Our produced result
         # What does the .data do? .data refrains from computing the gradient
         self_attention= TensorToImage(self.real_A_gray.data)
-        return OrderedDict([('real_A', real_A), ('fake_B', fake_B)])#, ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
+        return OrderedDict([('real_A', real_A),('fake_B', fake_B)])#, , ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
     def save_network(self,network,label,epoch):
         save_name='%s_net_%s.pth' %(epoch,label)

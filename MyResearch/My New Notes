@@ -1,5 +1,7 @@
 MAJOR OVERHAUL NEEDED!!!!
 
+# I've revamped the saving situation! If I want to save in place (same location as source), change the diplay function, img_dir in Setup and the predict function
+
 To Do list
 - Go through all Pytorch documentation to explore what is possible
 

@@ -33,6 +33,7 @@ def TrainingSetup(the_args):
     # EGAN used 0.0001 but Radford recommended 0.0002
     # Below does not need to be printed
     the_args.add_argument('--batch_size', type=int, default=16, help='input batch size (One of the aspects that can be used to control GPU requirements)')
+
     the_args.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
     the_args.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
     the_args.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')
@@ -85,6 +86,7 @@ def process(the_args): # I dont need to be printing the display and other useles
 
     opt.web_dir = os.path.join(opt.checkpoints_dir, opt.name, 'web')
     opt.img_dir = os.path.join(opt.web_dir, 'images')
+
     print('create web directory %s...' % opt.web_dir)
     if(os.path.isdir(opt.web_dir)==False):
         os.mkdir(opt.web_dir)
