@@ -8,6 +8,7 @@ import os
 from collections import OrderedDict
 import functools
 import numpy as np
+import glob
 
 
 # Check what would be the story when testing? Would the networks below be created( sound silly but isnt!)
@@ -67,6 +68,11 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         # Above looks optimized
         # We shouldnt be coming here in the first place when we are testing, just load directly from the latest model that we saved
         self.Gen=make_G(opt)
+        if self.opt.phase=='test':
+            self.load_model(self.Gen,'Gener')# Just get the latest!
+            self.load_model(self.Gen,'Global_Disc')# Just get the latest!
+            self.load_model(self.Gen,'Local_Disc')# Just get the latest!
+
 
         if(self.opt.phase=='train'): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
             self.G_Disc=make_Disc(opt,False)
@@ -243,6 +249,13 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.save_network(self.Gen,'Gener',label)
         self.save_network(self.G_Disc,'Global_Disc',label)
         self.save_network(self.L_Disc,'Local_Disc',label)
+
+    def load_model(self,network):
+        list_of_files = glob.glob(opt.save_dir) # * means all if need specific format then *.csv
+        print(list_of_files)
+        latest_file = max(list_of_files, key=os.path.getctime)
+        loaded_file_path= os.path.join(self.save_dir,loaded_file)
+        network.load_state_dict(torch.load(save_path))
 
 
 def make_G(opt):

@@ -21,11 +21,17 @@ def import_dataset(directory):
 def config_transforms(opt):
     trans_list=[]
     # For data augmentation, perform random cropping, sometimes horizontal flipping, sometimes vertical flipping and finalize normalize( to range [-1,1])
-    trans_list+=[transforms.RandomCrop(opt.crop_size),
-    transforms.RandomHorizontalFlip(p=0.5),
-    transforms.RandomVerticalFlip(p=0.5),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
+    if opt.phase=='train':
+        trans_list+=[transforms.RandomCrop(opt.crop_size),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
+    else:
+        trans_list+=[transforms.RandomCrop(opt.crop_size),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
+
     return transforms.Compose(trans_list)
 
 
@@ -33,7 +39,7 @@ class DataLoader:
     def __init__(self,opt):
         self.opt=opt
         self.dataset=FullDataset(opt)# Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
-        if opt.train:
+        if opt.phase=='train':
             self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= True, pin_memory=True,num_workers=6)
         else:
             self.dataloader= torch.utils.data.DataLoader(self.dataset,batch_size=opt.batch_size,shuffle= False, pin_memory=True,num_workers=1)
@@ -67,8 +73,9 @@ class FullDataset(data.Dataset):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]
 
-        A_img=self.transform(A_img)#This is where we actually perform the transformation. These are now tensors that are normalized
-        B_img=self.transform(B_img)
+        if self.opt.phase=='train':
+            A_img=self.transform(A_img)#This is where we actually perform the transformation. These are now tensors that are normalized
+            B_img=self.transform(B_img)
 
 
         input_img=A_img
