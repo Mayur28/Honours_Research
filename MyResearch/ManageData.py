@@ -28,7 +28,7 @@ def config_transforms(opt):
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
     else:
-        trans_list+=[transforms.RandomCrop(opt.crop_size),
+        trans_list+=[
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))] # Get the image to [-1,1]
 
@@ -73,9 +73,8 @@ class FullDataset(data.Dataset):
         A_img=self.A_imgs[index%self.A_size]# To avoid going out of bounds
         B_img=self.B_imgs[index% self.B_size]
 
-        if self.opt.phase=='train':
-            A_img=self.transform(A_img)#This is where we actually perform the transformation. These are now tensors that are normalized
-            B_img=self.transform(B_img)
+        A_img=self.transform(A_img)#This is where we actually perform the transformation. These are now tensors that are normalized
+        B_img=self.transform(B_img)
 
 
         input_img=A_img

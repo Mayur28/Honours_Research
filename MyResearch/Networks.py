@@ -70,8 +70,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.Gen=make_G(opt)
         if self.opt.phase=='test':
             self.load_model(self.Gen,'Gener')# Just get the latest!
-            self.load_model(self.Gen,'Global_Disc')# Just get the latest!
-            self.load_model(self.Gen,'Local_Disc')# Just get the latest!
+            #self.load_model(self.Gen,'Global_Disc')# Just get the latest!
+            #self.load_model(self.Gen,'Local_Disc')# Just get the latest!
 
 
         if(self.opt.phase=='train'): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
@@ -101,9 +101,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.fake_B= self.Gen.forward(the_input)# We forward prop. a batch at a time, not individual images in the batch!
 
     #Perfect
-    def perform_update(self,input):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
-        # forward
-    #This was directly copied over because the the stuff towards the bottom seemed necessary
+
+    def set_input(self,input):
         input_A=input['A']
         input_B=input['B']
         input_A_gray=input['A_gray']
@@ -115,6 +114,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
         self.input_img.resize_(input_img.size()).copy_(input_img)
 
+    def perform_update(self):  #Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
+        # forward
         # This is for optimizing the generator.
         self.forward()# This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
         self.G_optimizer.zero_grad()# Check the positioning of this statement (can it be first?)
@@ -128,6 +129,16 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.backward_L_Disc()
         self.G_Disc_optimizer.step()
         self.L_Disc_optimizer.step()
+
+    def predict(self):
+        # Why do we need these here?
+        self.real_A= Variable(self.input_A)
+        self.real_A.requires_grad=False
+        self.real_A_gray= Variable(self.input_A_gray)
+        self.real_A_gray.requires_grad=False
+        the_input= torch.cat([self.real_A,self.input_A_gray],1)
+        self.fake_B = self.Gen.forward(the_input)
+
 
     def backward_G(self):
         # First let the discriminator make a prediction on the fake samples
@@ -250,12 +261,12 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         self.save_network(self.G_Disc,'Global_Disc',label)
         self.save_network(self.L_Disc,'Local_Disc',label)
 
-    def load_model(self,network):
-        list_of_files = glob.glob(opt.save_dir) # * means all if need specific format then *.csv
-        print(list_of_files)
-        latest_file = max(list_of_files, key=os.path.getctime)
-        loaded_file_path= os.path.join(self.save_dir,loaded_file)
-        network.load_state_dict(torch.load(save_path))
+    def load_model(self,network,network_name):
+        list_of_files = glob.glob(str(self.opt.save_dir)+"/*") # * means all if need specific format then *.csv
+        res = list(filter(lambda x: network_name in x, list_of_files))
+        latest_file = max(res, key=os.path.getctime)
+        loaded_file_path= os.path.join(self.opt.save_dir,latest_file)
+        network.load_state_dict(torch.load(loaded_file_path))
 
 
 def make_G(opt):

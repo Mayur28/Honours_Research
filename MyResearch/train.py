@@ -6,11 +6,18 @@ import time
 import os
 
 
-def display_current_results(images,epoch): # Perfect
-    for label,image in images.items():# .items() extractes the "packages" from the dictionary
-        img_path=os.path.join(opt.img_dir,'epoch%.3d_%s.png'%(epoch,label))
-        image_pil=Image.fromarray(image)
-        image_pil.save(img_path)
+def display_current_results(images,title,phase='train'): # Perfect
+    if phase=='train':
+        for label,image in images.items():# .items() extractes the "packages" from the dictionary
+            img_path=os.path.join(opt.img_dir,'epoch%.3d_%s.png'%(title,label))
+            image_pil=Image.fromarray(image)
+            image_pil.save(img_path)
+    else:
+        for label,image in images.items():# .items() extracts the "packages" from the dictionary
+            img_path=os.path.join(opt.img_dir,'NEW -%s %s.png'%(title,label))
+            image_pil=Image.fromarray(image)
+            image_pil.save(img_path)
+
 
 def print_errors(epoch,i,errors,t):
     message='(epoch: %d, iters: %d, time: %.3f)'%(epoch,i,t)
@@ -38,7 +45,8 @@ for epoch in range(1,opt.niter+opt.niter_decay+1):
         total_steps+=opt.batch_size
         epoch_iter=total_steps-len(data_loader)*(epoch-1)
         #Remember at this stage, data is the batch 'dataset' in dictionary format. It slots the data into the correct variables self.inputA,etc to easily perform propagation operations
-        the_model.perform_update(data) # Perfect
+        the_model.set_input(data)
+        the_model.perform_update() # Perfect
 
         if(total_steps% opt.display_freq==0):
             display_current_results(the_model.for_displaying_images(),epoch)

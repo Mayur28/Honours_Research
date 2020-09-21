@@ -9,7 +9,6 @@ def DefaultSetup():
     parser.add_argument('--data_source', type=str, default='../final_dataset', help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
 
     # Calibrate the batch batch_size, crop_size and patch_size
-    parser.add_argument('--batch_size', type=int, default=16, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     parser.add_argument('--crop_size', type=int, default=340, help='Crop the images to this new size')
     parser.add_argument('--patch_size', type=int, default=32, help='specifies the size of the patch that we are going to use')
     # This can be modified according to the number of GPU's used to train the model
@@ -33,6 +32,7 @@ def DefaultSetup():
 def TrainingSetup(the_args):
     # EGAN used 0.0001 but Radford recommended 0.0002
     # Below does not need to be printed
+    the_args.add_argument('--batch_size', type=int, default=16, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     the_args.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
     the_args.add_argument('--print_freq', type=int, default=100, help='frequency of showing training results on console')
     the_args.add_argument('--save_latest_freq', type=int, default=5000, help='frequency of saving the latest results')
