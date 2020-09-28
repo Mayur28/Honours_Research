@@ -205,13 +205,13 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
 
-    def backward_D_basic(self,network,real,fake,use_ragan):
+    def backward_D_basic(self,network,real,fake,is_global):
     # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
         pred_real=network.forward(real)
         pred_fake=network.forward(fake.detach())#< What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
 
         # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
-        if(use_ragan): # Ragan is the relivistic discriminator! This label switching coincides with the paper. This is only used by the global discriminator
+        if(is_global): # Ragan is the relivistic discriminator! This label switching coincides with the paper. This is only used by the global discriminator
             Disc_loss=(self.model_loss(pred_real - torch.mean(pred_fake), True) +
             self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
         else:
