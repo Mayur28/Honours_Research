@@ -319,11 +319,7 @@ class MinimalUnet(nn.Module):
         else: # If it is the inner-most (this would be the base case of the recursion)
             x_up = self.down(x)
 
-        #print("Size of result")
         result= self.up(x_up)
-        #print(result.size())
-        #print("Size of x")
-        #print(x.size())
 
         if self.withoutskip: # No skip connections are used for the outer layer
             x_out = result
