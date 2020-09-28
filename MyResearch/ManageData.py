@@ -63,8 +63,11 @@ class FullDataset(data.Dataset):
         B_directory=os.path.join(opt.data_source,opt.phase+'B')
 
         self.A_imgs = import_dataset(A_directory)
-        self.B_imgs = import_dataset(B_directory)
-
+        if(opt.phase=='train'):
+            self.B_imgs = import_dataset(B_directory)
+        else:
+            self.B_imgs=[self.A_imgs]# We just need some image so that this portion
+            #of the code can be reused for training and testing
         self.A_size=len(self.A_imgs)
         self.B_size=len(self.B_imgs)
         self.transform=config_transforms(opt)

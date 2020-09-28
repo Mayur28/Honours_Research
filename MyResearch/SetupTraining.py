@@ -2,6 +2,7 @@ import os
 import torch
 import argparse
 import time
+import numpy as np
 
 def DefaultSetup():
     parser=argparse.ArgumentParser()
@@ -42,6 +43,7 @@ def TrainingSetup(the_args):
 def TestingSetup(the_args):
     the_args.add_argument('--batch_size', type=int, default=1, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     the_args.add_argument('--phase', type=str, default='test', help='train, val, test, etc')
+
     return the_args
 
 
@@ -49,8 +51,7 @@ def TestingSetup(the_args):
 def process(the_args): # I dont need to be printing the display and other useless information
     opt = the_args.parse_args()
 
-    opt.gpu_ids = opt.gpu_ids.split(',')
-    print(type(opt.gpu_ids))
+    opt.gpu_ids = list(map(int, opt.gpu_ids.split(',')))
 
     if len(opt.gpu_ids) > 0:
         torch.cuda.set_device(opt.gpu_ids[0])
@@ -72,8 +73,11 @@ def process(the_args): # I dont need to be printing the display and other useles
 
         opt_file.write('-------------- End ----------------\n')
         print('-------------- End ----------------')
-
-    opt.img_dir = os.path.join(opt.checkpoints_dir,opt.name, 'Images')
+    if(opt.phase=='train'):
+        opt.img_dir = os.path.join(opt.checkpoints_dir,opt.name, 'Training_IO')
+    else:
+        opt.img_dir = os.path.join(opt.checkpoints_dir,opt.name, 'Testing_IO')
+    print(opt.img_dir)
     if(os.path.isdir(opt.img_dir)==False):
         os.mkdir(opt.img_dir)
     opt.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')

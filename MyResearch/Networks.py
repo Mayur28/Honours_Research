@@ -372,7 +372,7 @@ class UnetSkipConnectionBlock(nn.Module):
         # Note that we we are not doing the double downsampling convolution
         downrelu = nn.LeakyReLU(0.2, True) # Look into the choice of activation function used!
         downnorm = norm_layer(inner_nc)
-        uprelu = nn.LeakyReLU(0.2,True)
+        uprelu = nn.ReLU(True)
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
