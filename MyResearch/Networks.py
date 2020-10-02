@@ -376,13 +376,13 @@ class UnetSkipConnectionBlock(nn.Module):
         upnorm = norm_layer(outer_nc)
 
         if position=='outermost':
-            up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
-            #upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
-            #reflect = nn.ReflectionPad2d(1)
-            #up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
+            #up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
+            upsample=nn.Upsample(scale_factor = 2, mode='bilinear')
+            reflect = nn.ReflectionPad2d(1)
+            up_conv =nn.Conv2d(2*inner_nc,outer_nc,kernel_size=3, stride=1, padding=0)
             down = [downconv]
-            #up= [uprelu,upsample,reflect,up_conv,nn.Tanh()]
-            up = [uprelu, up_conv,nn.Tanh()]
+            up= [uprelu,upsample,reflect,up_conv,nn.Tanh()]
+            #up = [uprelu, up_conv,nn.Tanh()]
             model = MinimalUnet(down,up,submodule,withoutskip=True)
         elif position=='innermost':
             upsample=nn.UpsamplingBilinear2d(scale_factor=2)
