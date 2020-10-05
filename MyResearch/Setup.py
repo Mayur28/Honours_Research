@@ -26,7 +26,7 @@ def DefaultSetup():
 
 def TrainingSetup(the_args):
 
-    the_args.add_argument('--batch_size', type=int, default=4, help='input batch size (One of the aspects that can be used to control GPU requirements)')
+    the_args.add_argument('--batch_size', type=int, default=8, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     the_args.add_argument('--phase', type=str, default='train', help='train or test')
     the_args.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
     the_args.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
