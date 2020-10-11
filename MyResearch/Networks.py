@@ -75,6 +75,7 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
 
 
         if(self.opt.phase=='train'): # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
+            self.old_lr = opt.lr
             self.G_Disc=make_Disc(opt,False)
             self.L_Disc=make_Disc(opt,True)
 
@@ -100,7 +101,18 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         the_input=torch.cat([self.real_img,self.real_A_gray],1)
         self.fake_B= self.Gen.forward(the_input)# We forward prop. a batch at a time, not individual images in the batch!
 
-    #Perfect
+    def update_learning_rate(self):# Spice this up!
+
+        lrd = self.opt.lr / self.opt.niter_decay
+        lr = self.old_lr - lrd
+        for param_group in self.G_optimizer.param_groups:
+            param_group['lr'] = lr
+        if self.opt.patchD:
+            for param_group in self.G_Disc_optimizer.param_groups:
+                param_group['lr'] = lr
+        for param_group in self.L_Disc_optimizer.param_groups:
+            param_group['lr'] = lr
+        self.old_lr = lr
 
     def set_input(self,input):
         input_A=input['A']
