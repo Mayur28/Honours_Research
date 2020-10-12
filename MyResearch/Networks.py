@@ -360,6 +360,7 @@ class UnetGenerator(nn.Module): # Perfect
         unet_block = UnetSkipConnectionBlock(ngf, ngf * 2,submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(3, ngf, submodule=unet_block,position='outermost', norm_layer=norm_type)# This is the outermost
         self.model=unet_block
+        self.model.half()
 
     def forward(self, input):
 

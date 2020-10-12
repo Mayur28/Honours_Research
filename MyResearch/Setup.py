@@ -31,7 +31,7 @@ def TrainingSetup(the_args):
     the_args.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
     the_args.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
     the_args.add_argument('--beta1', type=float, default=0.5, help='momentum term of Adam')
-    the_args.add_argument('--lr', type=float, default=0.0001, help='initial learning rate for Adam')
+    the_args.add_argument('--lr', type=float, default=0.00015, help='initial learning rate for Adam')
     # EGAN used 0.0001 but Radford recommended 0.0002
     # Below does not need to be printed
     the_args.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
