@@ -21,50 +21,28 @@ def weights_init(model):  # This is optimized!!!
         torch.nn.init.normal_(model.weight.data, 1.0, 0.02)
         torch.nn.init.constant_(model.bias.data, 0.0)
 
+def add_padding(input):  # Optimized!
+    height, width = input.shape[2], input.shape[3]
 
-def add_padding(input):
+    optimal_size = 512
+    pad_left = pad_right = pad_top = pad_bottom = 0
+    if width != optimal_size:
+        width_diff = optimal_size - width
+        pad_left = int(np.ceil(width_diff / 2))
+        pad_right = width_diff - pad_left
+    if height != optimal_size:
+        height_diff = optimal_size - height
+        pad_top = int(np.ceil(height_diff / 2))
+        pad_bottom = height_diff - pad_top
 
-    height_org, width_org = input.shape[2], input.shape[3]
-    divide = 16
-
-    if width_org % divide != 0 or height_org % divide != 0:
-
-        width_res = width_org % divide
-        height_res = height_org % divide
-        if width_res != 0:
-            width_div = divide - width_res
-            pad_left = int(width_div / 2)
-            pad_right = int(width_div - pad_left)
-        else:
-            pad_left = 0
-            pad_right = 0
-
-        if height_res != 0:
-            height_div = divide - height_res
-            pad_top = int(height_div  / 2)
-            pad_bottom = int(height_div  - pad_top)
-        else:
-            pad_top = 0
-            pad_bottom = 0
-
-        padding = nn.ReflectionPad2d((pad_left, pad_right, pad_top, pad_bottom))
-        input = padding(input)
-    else:
-        pad_left = 0
-        pad_right = 0
-        pad_top = 0
-        pad_bottom = 0
-
-    height, width = input.data.shape[2], input.data.shape[3]
-    assert width % divide == 0, 'width cant divided by stride'
-    assert height % divide == 0, 'height cant divided by stride'
-
+    padding = nn.ReflectionPad2d((pad_left, pad_right, pad_top, pad_bottom))
+    input = padding(input)
     return input, pad_left, pad_right, pad_top, pad_bottom
+
 
 def remove_padding(input, pad_left, pad_right, pad_top, pad_bottom):
     height, width = input.shape[2], input.shape[3]
-    return input[:,:, pad_top: height - pad_bottom, pad_left: width - pad_right]
-
+    return input[:, :, pad_top:height - pad_bottom, pad_left:width - pad_right]
 
 class The_Model:  # This is the grand model that encompasses everything ( the generator, both discriminators and the VGG network)
     def __init__(self, opt):

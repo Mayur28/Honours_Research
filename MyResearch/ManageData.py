@@ -32,7 +32,6 @@ def config_transforms(opt):
                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
     else:
         trans_list += [
-          transforms.Resize((340,340)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
 
@@ -89,10 +88,17 @@ class FullDataset(data.Dataset):
         B_img = self.B_imgs[index % self.B_size]
 
 
+
+
+        width, height =A_img.size
+        if(width>512 or height>512):
+            resize = transforms.Resize((512,512))
+            A_img = resize(A_img)
+            B_img = resize(B_img)
+
         A_img = self.transform(A_img)  # This is where we actually perform the transformation. These are now tensors that are normalized
         B_img = self.transform(B_img)
 
-        input_img = A_img
         # We are going from a normal 600x400 image ( In the PIL format),
         # after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
 

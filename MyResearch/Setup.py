@@ -30,7 +30,7 @@ def DefaultSetup():
 def TrainingSetup(the_args):
     the_args.add_argument('--batch_size', type=int, default=8, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     the_args.add_argument('--phase', type=str, default='train', help='train or test')
-    the_args.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
+    the_args.add_argument('--niter', type=int, default=80, help='# of iter at starting learning rate')
     the_args.add_argument('--beta1', type=float, default=0.5, help='momentum term of Adam')
     the_args.add_argument('--lr', type=float, default=0.000165, help='initial learning rate for Adam')
     # EGAN used 0.0001 but Radford recommended 0.0002
