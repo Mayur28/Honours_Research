@@ -1,4 +1,4 @@
-from SetupTraining import *
+from Setup import *
 from ManageData import DataLoader
 import Networks
 import glob

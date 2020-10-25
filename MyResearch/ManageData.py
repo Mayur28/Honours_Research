@@ -32,6 +32,7 @@ def config_transforms(opt):
                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
     else:
         trans_list += [
+          transforms.Resize((340,340)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
 
@@ -76,7 +77,7 @@ class FullDataset(data.Dataset):
         if (opt.phase == 'train'):
             self.B_imgs = import_dataset(B_directory)
         else:
-            self.B_imgs = [self.A_imgs]  # We just need some image so that this portion
+            self.B_imgs = self.A_imgs  # We just need some image so that this portion
             # of the code can be reused for training and testing
         self.A_size = len(self.A_imgs)
         self.B_size = len(self.B_imgs)

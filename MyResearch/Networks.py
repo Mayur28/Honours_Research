@@ -132,8 +132,10 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.real_A.requires_grad = False
         self.real_A_gray = Variable(self.input_A_gray)
         self.real_A_gray.requires_grad = False
+        print(self.real_A.size())
         the_input = torch.cat([self.real_A, self.input_A_gray], 1)
         self.fake_B = self.Gen.forward(the_input)
+        print(self.fake_B.size())
 
     def backward_G(self):
         # First let the discriminator make a prediction on the fake samples
