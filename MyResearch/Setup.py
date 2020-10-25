@@ -4,6 +4,8 @@ import argparse
 import time
 import numpy as np
 
+# For inference, the the data_source should be set to ../test_dataset. For training and testing, use final_dataset
+
 
 def DefaultSetup():
     parser = argparse.ArgumentParser()
