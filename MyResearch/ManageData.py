@@ -25,13 +25,14 @@ def config_transforms(opt):
     trans_list = []
     # For data augmentation, perform random cropping, sometimes horizontal flipping, sometimes vertical flipping and finalize normalize( to range [-1,1])
     if opt.phase == 'train':
-        trans_list += [transforms.RandomCrop(opt.crop_size),
+        trans_list += [transforms.Resize((512,512)),
                        transforms.RandomHorizontalFlip(p=0.5),
                        transforms.RandomVerticalFlip(p=0.5),
                        transforms.ToTensor(),
                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
     else:
         trans_list += [
+            transforms.Resize((512,512)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
 
@@ -89,13 +90,7 @@ class FullDataset(data.Dataset):
 
 
 
-
-        width, height =A_img.size
-        if(width>512 or height>512):
-            resize = transforms.Resize((512,512))
-            A_img = resize(A_img)
-            B_img = resize(B_img)
-
+        width, height = A_img.size
         A_img = self.transform(A_img)  # This is where we actually perform the transformation. These are now tensors that are normalized
         B_img = self.transform(B_img)
 

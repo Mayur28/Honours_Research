@@ -6,14 +6,13 @@ import numpy as np
 
 # For inference, the the data_source should be set to ../test_dataset. For training and testing, use final_dataset
 
-
 def DefaultSetup():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, default='Exp', help="Name of the current execution")
     parser.add_argument('--data_source', type=str, default='../final_dataset', help='path to dataset and should have substructure containing trainA,trainB,testA,testB')
     # Calibrate the batch batch_size, crop_size and patch_size
-    parser.add_argument('--crop_size', type=int, default=340, help='This will be the the size of the input to our network (the size is reduced by RandomCropping)')
-    parser.add_argument('--patch_size', type=int, default=32, help='Size of patch')
+    parser.add_argument('--crop_size', type=int, default=512, help='This will be the the size of the input to our network (the size is reduced by RandomCropping)')
+    parser.add_argument('--patch_size', type=int, default=64, help='Size of patch')
     # This can be modified according to the number of GPU's used to train the model
     parser.add_argument('--gpu_ids', type=str, default='0', help="Used to specify the id's of the GPU's (more specifically, '0' for 1 GPU, '0,1' for 2 GPU's,etc)")
 
@@ -21,8 +20,8 @@ def DefaultSetup():
     # Experiment with this being Batch as well!
     parser.add_argument('--norm_type', type=str, default='batch', help='instance or batch normalization in the generator')
     parser.add_argument('--num_downs', type=int, default=9, help=' How many U-net modules are created in the generator')
-    parser.add_argument('--n_layers_D', type=int, default=5, help='number of layers in global discriminator')
-    parser.add_argument('--n_layers_patchD', type=int, default=4, help='number of layers in local discriminator')
+    parser.add_argument('--n_layers_D', type=int, default=6, help='number of layers in global discriminator')
+    parser.add_argument('--n_layers_patchD', type=int, default=5, help='number of layers in local discriminator')
     parser.add_argument('--patchD_3', type=int, default=6, help='Number of patches to crop for the local discriminator')
     return parser
 
@@ -30,9 +29,9 @@ def DefaultSetup():
 def TrainingSetup(the_args):
     the_args.add_argument('--batch_size', type=int, default=8, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     the_args.add_argument('--phase', type=str, default='train', help='train or test')
-    the_args.add_argument('--niter', type=int, default=80, help='# of iter at starting learning rate')
+    the_args.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
     the_args.add_argument('--beta1', type=float, default=0.5, help='momentum term of Adam')
-    the_args.add_argument('--lr', type=float, default=0.000165, help='initial learning rate for Adam')
+    the_args.add_argument('--lr', type=float, default=0.00017, help='initial learning rate for Adam')
     # EGAN used 0.0001 but Radford recommended 0.0002
     # Below does not need to be printed
     the_args.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
