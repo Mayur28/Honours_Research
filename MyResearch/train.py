@@ -6,7 +6,8 @@ import time
 import os
 
 
-def display_current_results(images, title, phase='train'):  # Perfect
+
+def display_current_results(images, title, phase='train'):
     for label, image in images.items():  # .items() extractes the "packages" from the dictionary
         img_path = os.path.join(opt.img_dir, 'epoch%.3d_%s.png' % (title, label))
         image_pil = Image.fromarray(image)
@@ -32,8 +33,7 @@ total_steps = 0
 
 for epoch in range(1, opt.niter + 1):
     epoch_start_time = time.time()
-    for i, data in enumerate(
-            dataset):  # For each call, __get_item__ is called for each image in the current batch. Takes the images, formats it into the desired dictionary format, and this dictionary is then represented by data
+    for i, data in enumerate(dataset):  # For each call, __get_item__ is called for each image in the current batch. Takes the images, formats it into the desired dictionary format, and this dictionary is then represented by data
 
         iter_start_time = time.time()
         total_steps += opt.batch_size

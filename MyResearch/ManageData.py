@@ -27,6 +27,7 @@ def config_transforms(opt):
         trans_list += [transforms.RandomCrop(opt.crop_size),
                        transforms.RandomHorizontalFlip(p=0.5),
                        transforms.RandomVerticalFlip(p=0.5),
+                       transforms.RandomRotation(degrees= 120,resample = PIL.Image.BILINEAR),
                        transforms.ToTensor(),
                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
     else:
@@ -40,8 +41,7 @@ def config_transforms(opt):
 class DataLoader:
     def __init__(self, opt):
         self.opt = opt
-        self.dataset = FullDataset(
-            opt)  # Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
+        self.dataset = FullDataset(opt)  # Remember that self.dataset needs to have inherited from the built-in Dataset class to be used below... pin_memory apparently has to do with making it faster to load data to the gpu
         if opt.phase == 'train':
             self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=opt.batch_size, shuffle=True, pin_memory=True, num_workers=6)
         else:
@@ -87,7 +87,8 @@ class FullDataset(data.Dataset):
         r, g, b = input_img[0] + 1, input_img[1] + 1, input_img[2] + 1
         A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
         A_gray = torch.unsqueeze(A_gray, 0)
-        return {'A': A_img, 'B': B_img, 'A_gray': A_gray, 'input_img': input_img}
+        print(A_gray)
+        return {'A': A_img, 'B': B_img, 'A_gray': A_gray}
 
     def __len__(self):
         return max(self.A_size, self.B_size)

@@ -53,7 +53,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         # I'm assuming that a CUDA GPU is used.
         self.input_A = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size)  # We are basically creating a tensor to store 16 low-light colour images with size crop_size x crop_size
         self.input_B = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size)  # Same as above but now for storing the normal-light images (NOT THE RESULT!)
-        self.input_img = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size)
         self.input_A_gray = torch.cuda.FloatTensor(opt.batch_size, 1, opt.crop_size, opt.crop_size)  # this is for the attention maps
 
         self.vgg_loss = PerceptualLoss()
@@ -95,24 +94,21 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.real_A = Variable(self.input_A)  # Variable is basically a tensor (which represents a node in the comp. graph) and is part of the autograd package to easily compute gradients
         self.real_B = Variable(self.input_B)  # This contains the normal-light images ( sort of our reference images)
         self.real_A_gray = Variable(self.input_A_gray)  # This is the attention map
-        self.real_img = Variable(self.input_img)  # In our configuation, input_img=input_A
 
         # Make a prediction!
         # What is the latent used for?
-        the_input = torch.cat([self.real_img, self.real_A_gray], 1)
+        the_input = torch.cat([self.real_A, self.real_A_gray], 1)
         self.fake_B = self.Gen.forward(the_input)  # We forward prop. a batch at a time, not individual images in the batch!
 
     def set_input(self, input):
         input_A = input['A']
         input_B = input['B']
         input_A_gray = input['A_gray']
-        input_img = input['input_img']
 
         # Copy the data to there respective cuda Tensors used for training on the GPU
         self.input_A.resize_(input_A.size()).copy_(input_A)
         self.input_B.resize_(input_B.size()).copy_(input_B)
         self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
-        self.input_img.resize_(input_img.size()).copy_(input_img)
 
     def perform_update(self):  # Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
         # forward
