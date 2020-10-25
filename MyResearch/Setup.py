@@ -21,7 +21,6 @@ def DefaultSetup():
     parser.add_argument('--n_layers_D', type=int, default=5, help='number of layers in global discriminator')
     parser.add_argument('--n_layers_patchD', type=int, default=4, help='number of layers in local discriminator')
     parser.add_argument('--patchD_3', type=int, default=6, help='Number of patches to crop for the local discriminator')
-    # To be in accordance with EGAN, change above to 6 ( When not using the individual patch)
     return parser
 
 def TrainingSetup(the_args):
@@ -29,9 +28,8 @@ def TrainingSetup(the_args):
     the_args.add_argument('--batch_size', type=int, default=8, help='input batch size (One of the aspects that can be used to control GPU requirements)')
     the_args.add_argument('--phase', type=str, default='train', help='train or test')
     the_args.add_argument('--niter', type=int, default=100, help='# of iter at starting learning rate')
-    the_args.add_argument('--niter_decay', type=int, default=100, help='# of iter to linearly decay learning rate to zero')
     the_args.add_argument('--beta1', type=float, default=0.5, help='momentum term of Adam')
-    the_args.add_argument('--lr', type=float, default=0.00015, help='initial learning rate for Adam')
+    the_args.add_argument('--lr', type=float, default=0.000165, help='initial learning rate for Adam')
     # EGAN used 0.0001 but Radford recommended 0.0002
     # Below does not need to be printed
     the_args.add_argument('--display_freq', type=int, default=30, help='frequency of showing training results on screen')
@@ -48,7 +46,7 @@ def TestingSetup(the_args):
 
 
 
-def process(the_args): # I dont need to be printing the display and other useless information
+def process(the_args): 
     opt = the_args.parse_args()
 
     opt.gpu_ids = list(map(int, opt.gpu_ids.split(',')))

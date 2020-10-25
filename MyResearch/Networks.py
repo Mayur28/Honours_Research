@@ -107,9 +107,8 @@ class The_Model: # This is the grand model that encompasses everything ( the gen
         lr = self.old_lr - lrd
         for param_group in self.G_optimizer.param_groups:
             param_group['lr'] = lr
-        if self.opt.patchD:
-            for param_group in self.G_Disc_optimizer.param_groups:
-                param_group['lr'] = lr
+        for param_group in self.G_Disc_optimizer.param_groups:
+            param_group['lr'] = lr
         for param_group in self.L_Disc_optimizer.param_groups:
             param_group['lr'] = lr
         self.old_lr = lr
@@ -360,7 +359,6 @@ class UnetGenerator(nn.Module): # Perfect
         unet_block = UnetSkipConnectionBlock(ngf, ngf * 2,submodule=unet_block, norm_layer=norm_type)
         unet_block = UnetSkipConnectionBlock(3, ngf, submodule=unet_block,position='outermost', norm_layer=norm_type)# This is the outermost
         self.model=unet_block
-        self.model.half()
 
     def forward(self, input):
 
