@@ -2,6 +2,7 @@ import os
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+import PIL
 from PIL import Image
 import numpy as np
 import glob
@@ -27,7 +28,6 @@ def config_transforms(opt):
         trans_list += [transforms.RandomCrop(opt.crop_size),
                        transforms.RandomHorizontalFlip(p=0.5),
                        transforms.RandomVerticalFlip(p=0.5),
-                       transforms.RandomRotation(degrees= 120,resample = PIL.Image.BILINEAR),
                        transforms.ToTensor(),
                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
     else:
@@ -36,6 +36,14 @@ def config_transforms(opt):
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]  # Get the image to [-1,1]
 
     return transforms.Compose(trans_list)
+
+def gray_transform():
+    trans_list = []
+    trans_list += [transforms.ToPILImage(),
+                   transforms.Grayscale(num_output_channels =1),
+                   transforms.ToTensor()]
+    return transforms.Compose(trans_list)
+
 
 
 class DataLoader:
@@ -73,10 +81,12 @@ class FullDataset(data.Dataset):
         self.A_size = len(self.A_imgs)
         self.B_size = len(self.B_imgs)
         self.transform = config_transforms(opt)
+        self.gray_transform = gray_transform()
 
     def __getitem__(self, index):
         A_img = self.A_imgs[index % self.A_size]  # To avoid going out of bounds
         B_img = self.B_imgs[index % self.B_size]
+
 
         A_img = self.transform(A_img)  # This is where we actually perform the transformation. These are now tensors that are normalized
         B_img = self.transform(B_img)
@@ -84,17 +94,21 @@ class FullDataset(data.Dataset):
         input_img = A_img
         # We are going from a normal 600x400 image ( In the PIL format),
         # after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
-        r, g, b = input_img[0] + 1, input_img[1] + 1, input_img[2] + 1
-        A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
-        A_gray = torch.unsqueeze(A_gray, 0)
-        print(A_gray)
+
+        A_gray = 1 - self.gray_transform(A_img)
+
+        #r, g, b = input_img[0] + 1, input_img[1] + 1, input_img[2] + 1
+        #A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
+        #A_gray = torch.unsqueeze(A_gray, 0)
+        #print(A_gray.size())
+        # Size of A_gry is [1,340,340]
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray}
 
     def __len__(self):
         return max(self.A_size, self.B_size)
 
 
-def TensorToImage(img_tensor):
+def TensorToImage(img_tensor): # This has to change!
     for_disp = img_tensor[0].cpu().float().numpy()
     for_disp = (np.transpose(for_disp, (1, 2, 0)) + 1) / 2.0 * 255.0
     for_disp = np.clip(for_disp, 0, 255)
