@@ -95,10 +95,12 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.fake_B = self.Gen.forward(the_input)  # We forward prop. a batch at a time, not individual images in the batch!
 
 
-     def update_learning_rate(self):
+    def update_learning_rate(self):
 
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd
+        self.old_lr = lr
+
         for param_group in self.G_optimizer.param_groups:
             param_group['lr'] = lr
         if self.opt.patchD:
@@ -106,7 +108,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
                 param_group['lr'] = lr
         for param_group in self.L_Disc_optimizer.param_groups:
             param_group['lr'] = lr
-        self.old_lr = lr
 
     def set_input(self, input):
         input_A = input['A']
@@ -400,7 +401,7 @@ class PatchGAN(nn.Module):
 
         self.opt = opt
         if patch:
-            no_layers = self.opt.num_layers_patch_disc
+            no_layers = self.opt.num_patch_disc_layers
         else:
             no_layers = self.opt.num_disc_layers
 
