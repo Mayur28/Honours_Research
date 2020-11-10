@@ -97,7 +97,7 @@ class FullDataset(data.Dataset):
 
         #A_gray = 1 - self.gray_transform(A_img)
 
-        r, g, b = input_img[0] + 1, input_img[1] + 1, input_img[2] + 1
+        r, g, b = A_img[0] + 1, A_img[1] + 1, A_img[2] + 1
         A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
         A_gray = torch.unsqueeze(A_gray, 0)
         #print(A_gray.size())
@@ -108,7 +108,7 @@ class FullDataset(data.Dataset):
         return max(self.A_size, self.B_size)
 
 
-def TensorToImage(img_tensor): 
+def TensorToImage(img_tensor):
     for_disp = img_tensor[0].cpu().float().numpy()
     for_disp = (np.transpose(for_disp, (1, 2, 0)) + 1) / 2.0 * 255.0
     for_disp = np.clip(for_disp, 0, 255)

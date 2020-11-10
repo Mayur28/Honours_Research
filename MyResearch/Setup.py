@@ -8,15 +8,15 @@ import numpy as np
 
 def DefaultSetup():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--name', type=str, default='Exp', help="Name of the current execution")
+    parser.add_argument('--name', type=str, default='Fancy', help="Name of the current execution")
     parser.add_argument('--data_source', type=str, default='../final_dataset', help='path to dataset and should have substructure containing trainA,trainB,testA,testB')
     # Calibrate the batch batch_size, crop_size and patch_size
     parser.add_argument('--crop_size', type=int, default=512, help='This will be the the size of the input to our network (the size is reduced by RandomCropping)')
-    parser.add_argument('--patch_size', type=int, default=64, help='Size of patch')
+    parser.add_argument('--patch_size', type=int, default=32, help='Size of patch')
     # This can be modified according to the number of GPU's used to train the model
     parser.add_argument('--gpu_ids', type=str, default='0', help="Used to specify the id's of the GPU's (more specifically, '0' for 1 GPU, '0,1' for 2 GPU's,etc)")
 
-    parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/TestDir/', help='models are saved here')
+    parser.add_argument('--checkpoints_dir', type=str, default='/content/drive/My Drive/Latest/', help='models are saved here')
     # Experiment with this being Batch as well!
     parser.add_argument('--norm_type', type=str, default='batch', help='instance or batch normalization in the generator')
     parser.add_argument('--num_downs', type=int, default=9, help=' How many U-net modules are created in the generator')
