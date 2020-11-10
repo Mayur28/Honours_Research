@@ -88,8 +88,6 @@ class FullDataset(data.Dataset):
         A_img = self.A_imgs[index % self.A_size]  # To avoid going out of bounds
         B_img = self.B_imgs[index % self.B_size]
 
-
-
         width, height = A_img.size
         A_img = self.transform(A_img)  # This is where we actually perform the transformation. These are now tensors that are normalized
         B_img = self.transform(B_img)
@@ -97,11 +95,11 @@ class FullDataset(data.Dataset):
         # We are going from a normal 600x400 image ( In the PIL format),
         # after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
 
-        A_gray = 1 - self.gray_transform(A_img)
+        #A_gray = 1 - self.gray_transform(A_img)
 
-        #r, g, b = input_img[0] + 1, input_img[1] + 1, input_img[2] + 1
-        #A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
-        #A_gray = torch.unsqueeze(A_gray, 0)
+        r, g, b = input_img[0] + 1, input_img[1] + 1, input_img[2] + 1
+        A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
+        A_gray = torch.unsqueeze(A_gray, 0)
         #print(A_gray.size())
         # Size of A_gry is [1,340,340]
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray}
@@ -110,7 +108,7 @@ class FullDataset(data.Dataset):
         return max(self.A_size, self.B_size)
 
 
-def TensorToImage(img_tensor): # This has to change!
+def TensorToImage(img_tensor): 
     for_disp = img_tensor[0].cpu().float().numpy()
     for_disp = (np.transpose(for_disp, (1, 2, 0)) + 1) / 2.0 * 255.0
     for_disp = np.clip(for_disp, 0, 255)

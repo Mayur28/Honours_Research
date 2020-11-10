@@ -5,15 +5,14 @@ import Networks
 import time
 import os
 
-
-
-def display_current_results(images, title, phase='train'):
-    for label, image in images.items():  # .items() extractes the "packages" from the dictionary
+# Saves the input and output images
+def save_images(images, title, phase='train'):
+    for label, image in images.items():  # .items() extracts the "packages" from the dictionary
         img_path = os.path.join(opt.img_dir, 'epoch%.3d_%s.png' % (title, label))
         image_pil = Image.fromarray(image)
         image_pil.save(img_path)
 
-
+# Prints the errors of the generator (+ vgg loss) and both discriminators, making it easier to detect model collapse
 def print_errors(epoch, i, errors, t):
     message = '(epoch: %d, iters: %d, time: %.3f)' % (epoch, i, t)
     for k, v in errors.items():  # --> This is to extract from the Ordered Dictionary
@@ -31,19 +30,19 @@ the_model = Networks.The_Model(opt)
 
 total_steps = 0
 
-for epoch in range(1, opt.niter + 1):
+for epoch in range(1, opt.niter + opt.niter_decay+ 1):
     epoch_start_time = time.time()
     for i, data in enumerate(dataset):  # For each call, __get_item__ is called for each image in the current batch. Takes the images, formats it into the desired dictionary format, and this dictionary is then represented by data
 
         iter_start_time = time.time()
         total_steps += opt.batch_size
         epoch_iter = total_steps - len(data_loader) * (epoch - 1)
-        # Remember at this stage, data is the batch 'dataset' in dictionary format. It slots the data into the correct variables self.inputA,etc to easily perform propagation operations
-        the_model.set_input(data)
-        the_model.perform_update()  # Perfect
+        the_model.set_input(data) # Insert the new data into the necessary containers to be read from during the forward and backward pass
+        the_model.perform_update()
 
+        # Below prints diagnostic information such as time taken per an epoch
         if total_steps % opt.display_freq == 0:
-            display_current_results(the_model.for_displaying_images(), epoch)
+            save_images(the_model.for_displaying_images(), epoch)
 
         if total_steps % opt.print_freq == 0:
             exec_time = (time.time() - iter_start_time) / opt.batch_size
@@ -54,3 +53,7 @@ for epoch in range(1, opt.niter + 1):
 
     print('End of epoch %d / %d \t Time Taken: %d sec' %
           (epoch, opt.niter, time.time() - epoch_start_time))
+
+    # Detects when do we start decaying the learning rate (apparently improves results so that "the model does not get trapped in a local minima")
+    if(epoch> opt.niter):
+        the_model.update_lr()

@@ -10,10 +10,8 @@ import functools
 import numpy as np
 import glob
 
-
-# Check what would be the story when testing? Would the networks below be created( sound silly but isnt!)
-
-def weights_init(model):  # This is optimized!!!
+# Initializes the weights to have mean= 0, and std = 0.02 as advised by Radford
+def weights_init(model):
     class_name = model.__class__.__name__
     if class_name.find('Conv') != -1:
         torch.nn.init.normal_(model.weight.data, 0.0, 0.02)
@@ -21,10 +19,13 @@ def weights_init(model):  # This is optimized!!!
         torch.nn.init.normal_(model.weight.data, 1.0, 0.02)
         torch.nn.init.constant_(model.bias.data, 0.0)
 
-def add_padding(input):  # Optimized!
+# Adds padding to the input image to ensure the input has the correct size to be passed to the network
+# (In particular, the architecture seems quite sensitive to the size of the input image, regardless, 512x512 should be large enough)
+# If the model needs to be able to handle images with size between 512 -> 1024, num_downs should be changed to 10 to accomodate for this change
+def add_padding(input):
     height, width = input.shape[2], input.shape[3]
 
-    optimal_size = 512
+    optimal_size = 512 # 2^(num_downs) i.e, will be 1024 if num_downs = 10, etc
     pad_left = pad_right = pad_top = pad_bottom = 0
     if width != optimal_size:
         width_diff = optimal_size - width
@@ -39,7 +40,7 @@ def add_padding(input):  # Optimized!
     input = padding(input)
     return input, pad_left, pad_right, pad_top, pad_bottom
 
-
+# Removes the padding once the images have been enhanced
 def remove_padding(input, pad_left, pad_right, pad_top, pad_bottom):
     height, width = input.shape[2], input.shape[3]
     return input[:, :, pad_top:height - pad_bottom, pad_left:width - pad_right]
@@ -61,18 +62,16 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         # The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makes sense)
         # I'm setting it to eval() because it's not being trained in anyway
 
-        for weights in self.vgg.parameters():  # THIS IS THE BEST WAY OF DOING THIS
-            weights.requires_grad = False  # Verified! For all the weights in the VGG network, we do not want to be updating those weights, therefore, we save computation using the above!
+        for weights in self.vgg.parameters():
+            weights.requires_grad = False  # The weights of vgg should not be trainable and we should not waste computation attempting to compute gradients for the VGG network
 
-        # Above looks optimized
-        # We shouldnt be coming here in the first place when we are testing, just load directly from the latest model that we saved
+
         self.Gen = make_G(opt)
         if self.opt.phase == 'test':
-            self.load_model(self.Gen, 'Gener')  # Just get the latest!
-            # self.load_model(self.Gen,'Global_Disc')# Just get the latest!
-            # self.load_model(self.Gen,'Local_Disc')# Just get the latest!
+            self.load_model(self.Gen, 'Gener') # Will automatically load the latest generator model
+            self.Gen.eval()
 
-        if self.opt.phase == 'train':  # Why would we be instantiating new discriminators when we are testing?? We shouldnt be coming here in the first place.
+        if self.opt.phase == 'train':
             self.old_lr = opt.lr
             self.G_Disc = make_Disc(opt, False)
             self.L_Disc = make_Disc(opt, True)
@@ -83,20 +82,31 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
             self.G_optimizer = torch.optim.Adam(self.Gen.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.G_Disc_optimizer = torch.optim.Adam(self.G_Disc.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.L_Disc_optimizer = torch.optim.Adam(self.L_Disc.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-            # if self.opt.phase!='train': # We shouldn't be coming here in the first place! We should directly be able to load the model...
-            #   self.Gen.eval()# Do we really need this? I dont think that we are instantiating a new network when predicting, we're just loading an existing network...
+
 
     def forward(self):
-        # Look into what the Variable stuff is for
 
         self.real_A = Variable(self.input_A)  # Variable is basically a tensor (which represents a node in the comp. graph) and is part of the autograd package to easily compute gradients
         self.real_B = Variable(self.input_B)  # This contains the normal-light images ( sort of our reference images)
         self.real_A_gray = Variable(self.input_A_gray)  # This is the attention map
 
-        # Make a prediction!
-        # What is the latent used for?
+
         the_input = torch.cat([self.real_A, self.real_A_gray], 1)
         self.fake_B = self.Gen.forward(the_input)  # We forward prop. a batch at a time, not individual images in the batch!
+
+
+     def update_learning_rate(self):
+
+        lrd = self.opt.lr / self.opt.niter_decay
+        lr = self.old_lr - lrd
+        for param_group in self.G_optimizer.param_groups:
+            param_group['lr'] = lr
+        if self.opt.patchD:
+            for param_group in self.G_Disc_optimizer.param_groups:
+                param_group['lr'] = lr
+        for param_group in self.L_Disc_optimizer.param_groups:
+            param_group['lr'] = lr
+        self.old_lr = lr
 
     def set_input(self, input):
         input_A = input['A']
@@ -108,24 +118,22 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.input_B.resize_(input_B.size()).copy_(input_B)
         self.input_A_gray.resize_(input_A_gray.size()).copy_(input_A_gray)
 
-    def perform_update(self):  # Do the forward,backprop and update the weights... this is a very powerful and 'highly abstracted' function
-        # forward
+    def perform_update(self):  # Do the forward,backprop and update the weights
         # This is for optimizing the generator.
         self.forward()  # This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
-        self.G_optimizer.zero_grad()  # Check the positioning of this statement (can it be first?)
-        self.backward_G()
-        self.G_optimizer.step()
+        self.G_optimizer.zero_grad()
+        self.Gen_Backprop()
+        self.G_optimizer.step() # Perform the necessary optimization pertaining to the generator
 
         # Now onto updating the discriminator!
         self.G_Disc_optimizer.zero_grad()
-        self.backward_G_Disc()
+        self.Global_Disc_Backprop()
         self.L_Disc_optimizer.zero_grad()
-        self.backward_L_Disc()
+        self.Local_Disc_Backprop()
         self.G_Disc_optimizer.step()
         self.L_Disc_optimizer.step()
 
     def predict(self):
-        # Why do we need these here?
         self.real_A = Variable(self.input_A)
         self.real_A.requires_grad = False
         self.real_A_gray = Variable(self.input_A_gray)
@@ -133,30 +141,26 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         the_input = torch.cat([self.real_A, self.input_A_gray], 1)
         self.fake_B = self.Gen.forward(the_input)
 
-    def backward_G(self):
+    def Gen_Backprop(self):
         # First let the discriminator make a prediction on the fake samples
         # This is the part recommended by Radford where we test real and fake samples in stages
         pred_fake = self.G_Disc.forward(self.fake_B)
         # torch.mean() is a scalar... what is going on?
         pred_real = self.G_Disc.forward(self.real_B)
 
-        # The switching is now clarified as explained in the paper
         self.Gen_adv_loss = (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
 
-        # Experiment as much as possible with the latent variable and understand what exactly does it represent. Find a better way of doing the cropping, their approach looks lame...
+        # Experiment as much as possible with the latent variable and understand what exactly does it represent.
         w = self.real_A.size(3)
         h = self.real_B.size(2)
-
-        # Check if there is really a need for these seperate patches
-        # fake_B is a tensor of many images, how do we know from which image in the tensor are we cropping from? It seems that we take a patch from each image in the tensor (containing 16 images each)
 
         self.fake_patch_list = []
         self.real_patch_list = []
         self.input_patch_list = []
 
-        # This will basically create 8 batches (of 16 patches each)
-        for i in range(self.opt.patchD_3):
+        # Prepare the cropped images for the local discriminator so that we can just read from the appropriate data container when required
+        for i in range(self.opt.num_patches):
             w_offset = random.randint(0, max(0, w - self.opt.patch_size - 1))
             h_offset = random.randint(0, max(0, h - self.opt.patch_size - 1))
 
@@ -164,44 +168,37 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
             self.real_patch_list.append(self.real_B[:, :, h_offset:h_offset + self.opt.patch_size, w_offset:w_offset + self.opt.patch_size])
             self.input_patch_list.append(self.real_A[:, :, h_offset:h_offset + self.opt.patch_size, w_offset:w_offset + self.opt.patch_size])
 
-            # At this stage, we now have all the patch stuff in place, they will then be passed through the discriminator at a later stage
-        # Honestly dont think the patch stuff is really being handled in the best way right now...
-
-        # We are definitely switching the label here because the patches are fake but we're setting the 'target_is_real' variable to True. Look into this in accordance with MLM plus others
         accum_gen_loss = 0
         pred_fake_patch_list = 0
         # Perform the predictions on the list of patches
-        for i in range(self.opt.patchD_3):
+        for i in range(self.opt.num_patches):
             w_offset = random.randint(0, max(0, w - self.opt.patch_size - 1))
             h_offset = random.randint(0, max(0, h - self.opt.patch_size - 1))
 
-            pred_fake_patch_list = self.L_Disc.forward(self.fake_patch_list[i])  # Just check what is the shape of pred_fake_patch_list? Is it a single image or a batch?
+            pred_fake_patch_list = self.L_Disc.forward(self.fake_patch_list[i])
 
             accum_gen_loss += self.model_loss(pred_fake_patch_list, True)
-        # Check if the below statement is really necessary( the dividing part)
-        self.Gen_adv_loss += accum_gen_loss / float(self.opt.patchD_3)
-        # This now contains the loss from propagating the entire image and now, we're adding the average loss from all the fake patchs
+        self.Gen_adv_loss += accum_gen_loss / float(self.opt.num_patches)
 
-        # Check if we use the other patch lists
         self.total_vgg_loss = self.vgg_loss.compute_vgg_loss(self.vgg, self.fake_B, self.real_A) * 1.0  # This the vgg loss for the entire images!
 
         patch_loss_vgg = 0
-        for i in range(self.opt.patchD_3):
+        for i in range(self.opt.num_patches):
             patch_loss_vgg += self.vgg_loss.compute_vgg_loss(self.vgg, self.fake_patch_list[i], self.input_patch_list[i]) * 1.0
 
-        self.total_vgg_loss += patch_loss_vgg / float(self.opt.patchD_3)
+        self.total_vgg_loss += patch_loss_vgg / float(self.opt.num_patches)
 
         self.Gen_loss = self.Gen_adv_loss + self.total_vgg_loss  # The loss stuff is extremely simple to understand!
         self.Gen_loss.backward()  # Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
 
-    def backward_D_basic(self, network, real, fake, is_global):
-        # THIS IS ACTUALLY WHERE WE'RE WE TRAINING THE DISC SEPERATELY!
+    # This is invoked when we update both the global and local discriminator
+    # We just having to perform a slight modification when computing the loss for the global discriminator
+    def Shared_Disc_Backprop(self, network, real, fake, is_global):
         pred_real = network.forward(real)
         pred_fake = network.forward(
-            fake.detach())  # < What does this even mean? I think that it may have something to do with how the gradients are calculated (but we shouldnt be caluclating gradients in the first place?)
+            fake.detach())
 
-        # Like in the generator case, this calculation is swapped for some reason. THIS IS THE FOUNDATION OF THE ENTIRE ALGORITHM. LOOK CAREFULLY INTO THIS EXPRESSION
-        if (is_global):  # Ragan is the relivistic discriminator! This label switching coincides with the paper. This is only used by the global discriminator
+        if (is_global):
             Disc_loss = (self.model_loss(pred_real - torch.mean(pred_fake), True) +
                          self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
         else:
@@ -210,17 +207,18 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
             Disc_loss = (loss_D_real + loss_D_fake) * 0.5
         return Disc_loss
 
-    def backward_G_Disc(self):
-        self.G_Disc_loss = self.backward_D_basic(self.G_Disc, self.real_B, self.fake_B, True)
+    # Global discriminator backprop
+    def Global_Disc_Backprop(self):
+        self.G_Disc_loss = self.Shared_Disc_Backprop(self.G_Disc, self.real_B, self.fake_B, True)
         self.G_Disc_loss.backward()
 
-    def backward_L_Disc(self):
+    # Local discriminator backprop
+    def Local_Disc_Backprop(self):
         L_Disc_loss = 0
 
-        for i in range(self.opt.patchD_3):
-            L_Disc_loss += self.backward_D_basic(self.L_Disc, self.real_patch_list[i], self.fake_patch_list[i], False)
-        # This is the normal calculation. The calc. for the whole image is handled seperately... we only handling patches here, thats why we can average everything.
-        self.L_Disc_loss = L_Disc_loss / float(self.opt.patchD_3)
+        for i in range(self.opt.num_patches):
+            L_Disc_loss += self.Shared_Disc_Backprop(self.L_Disc, self.real_patch_list[i], self.fake_patch_list[i], False)
+        self.L_Disc_loss = L_Disc_loss / float(self.opt.num_patches)
         self.L_Disc_loss.backward()
 
     def get_model_errors(self, epoch):
@@ -230,7 +228,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         vgg = self.total_vgg_loss.item() / 1.0
         return OrderedDict([('Gen', Gen), ('G_Disc', Global_disc), ('L_Disc', Local_disc), ('vgg', vgg)])
 
-    # Perfect
     def for_displaying_images(self):  # Since self.realA_ was declared as a Variable, .data extracts the tensor of the variable.
         real_A = TensorToImage(self.real_A.data)  # The low-light image (which is also our input image)
         fake_B = TensorToImage(self.fake_B.data)  # Our produced result
@@ -239,6 +236,7 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         return OrderedDict([('real_A', real_A), (
             'fake_B', fake_B)])  # , , ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
 
+    # Save the network periodically
     def save_network(self, network, label, epoch):
         save_name = '%s_net_%s.pth' % (epoch, label)
         save_path = os.path.join(self.opt.save_dir, save_name)
@@ -250,6 +248,7 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.save_network(self.G_Disc, 'Global_Disc', label)
         self.save_network(self.L_Disc, 'Local_Disc', label)
 
+    # Function that finds the latest model to load when we are training
     def load_model(self, network, network_name):
         list_of_files = glob.glob(str(self.opt.save_dir) + "/*")  # * means all if need specific format then *.csv
         res = list(filter(lambda x: network_name in x, list_of_files))
@@ -260,7 +259,7 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
 def make_G(opt):
     generator = UnetGenerator(opt)
-    generator.cuda(device=opt.gpu_ids[0])  # jackpot! We see that the model is loaded to the GPU
+    generator.cuda(device=opt.gpu_ids[0])  # Transfer the generator to the GPU
     generator = torch.nn.DataParallel(generator, opt.gpu_ids)  # We only need this when we have more than one GPU
     generator.apply(weights_init)  # The weight initialization
     return generator
@@ -268,7 +267,7 @@ def make_G(opt):
 
 def make_Disc(opt, patch):
     discriminator = PatchGAN(opt, patch)
-    discriminator.cuda(device=opt.gpu_ids[0])  # Jackpot, we are loading the model to the GPU
+    discriminator.cuda(device=opt.gpu_ids[0])  #Load the model into the GPU
     discriminator = torch.nn.DataParallel(discriminator, opt.gpu_ids)  # Split the input across all the GPU's (if applicable)
     discriminator.apply(weights_init)
     return discriminator
@@ -401,9 +400,9 @@ class PatchGAN(nn.Module):
 
         self.opt = opt
         if patch:
-            no_layers = self.opt.n_layers_patchD
+            no_layers = self.opt.num_layers_patch_disc
         else:
-            no_layers = self.opt.n_layers_D
+            no_layers = self.opt.num_disc_layers
 
         ndf = 64
         # Needs to be treated seperately (as advised by Radford - we dont apply on output of generator and input of discriminator)
@@ -433,13 +432,11 @@ class PatchGAN(nn.Module):
         return self.model(input)  # <-- pass through the discriminator itself which is represented by self.model
 
 
-class PerceptualLoss(nn.Module):  # All NN's needed to be based on this class and have a forward() function
+class PerceptualLoss(nn.Module):
     def __init__(self):
         super(PerceptualLoss, self).__init__()
-        self.instance_norm = nn.InstanceNorm2d(512, affine=False)  # <-- Affine determines if some of the parameters for normalizing are "learnable" or not.
+        self.instance_norm = nn.InstanceNorm2d(512, affine=False)  # This is to stabilize training
         # 512 is the number of features
-
-    # This is to stabilize training
 
     def compute_vgg_loss(self, vgg_network, image, target):
         image_vgg = vgg_preprocess(image)
@@ -456,7 +453,6 @@ class Vgg(nn.Module):
     def __init__(self):
         super(Vgg, self).__init__()
 
-        # This needs to be changed! Atleast the names... We were told ( check where) that the first 5 layers of the VGG networks are used.
         self.conv1_1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
         self.conv1_2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
 
@@ -500,6 +496,7 @@ class Vgg(nn.Module):
 def vgg_preprocess(batch):
     tensortype = type(batch.data)
     (r, g, b) = torch.chunk(batch, 3, dim=1)
+    # We are having to perfoem this odd transformation because of the way the loaded vgg network was trained
     batch = torch.cat((b, g, r), dim=1)  # convert RGB to BGR
     batch = (batch + 1) * 255 * 0.5  # [-1, 1] -> [0, 255]
     return batch
