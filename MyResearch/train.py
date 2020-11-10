@@ -56,4 +56,4 @@ for epoch in range(1, opt.niter + opt.niter_decay+ 1):
 
     # Detects when do we start decaying the learning rate (apparently improves results so that "the model does not get trapped in a local minima")
     if(epoch> opt.niter):
-        the_model.update_lr()
+        the_model.update_learning_rate()
