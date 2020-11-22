@@ -103,9 +103,8 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
         for param_group in self.G_optimizer.param_groups:
             param_group['lr'] = lr
-        if self.opt.patchD:
-            for param_group in self.G_Disc_optimizer.param_groups:
-                param_group['lr'] = lr
+        for param_group in self.G_Disc_optimizer.param_groups:
+            param_group['lr'] = lr
         for param_group in self.L_Disc_optimizer.param_groups:
             param_group['lr'] = lr
 
