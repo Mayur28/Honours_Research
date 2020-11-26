@@ -23,5 +23,5 @@ print(len(dataset))
 for i,data in enumerate(dataset):
     model.set_input(data)
     model.predict()
-    print("Processing: "+str(filename))
+    print("Processing: "+str(file_names[i]))
     save_images(model.for_displaying_images(),file_names[i],phase='test')

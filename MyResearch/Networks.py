@@ -284,7 +284,7 @@ class GANLoss(nn.Module):
         return self.loss(input, target_tensor)  # We then perform MSE on this!
 
 
-def get_norm_layer(norm_type='instance'):  # Optimize the position and the function itself.. Right now, it was directly copied over... Look into this
+def get_norm_layer(norm_type='instance'):
     if norm_type == 'batch':
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
     elif norm_type == 'instance':
@@ -496,7 +496,7 @@ class Vgg(nn.Module):
 def vgg_preprocess(batch):
     tensortype = type(batch.data)
     (r, g, b) = torch.chunk(batch, 3, dim=1)
-    # We are having to perfoem this odd transformation because of the way the loaded vgg network was trained
+    # We are having to perform this odd transformation because of the way the loaded vgg network was trained
     batch = torch.cat((b, g, r), dim=1)  # convert RGB to BGR
     batch = (batch + 1) * 255 * 0.5  # [-1, 1] -> [0, 255]
     return batch
