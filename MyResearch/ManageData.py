@@ -7,15 +7,15 @@ from PIL import Image
 import numpy as np
 import glob
 
-
+# Create the dataloader (used for returning batches of the dataset in an efficient manner)
 def DataLoader(opt):
     data_loader = DataLoader(opt)
     return data_loader
 
-
+# Import the dataset
 def import_dataset(directory):
     images = []
-    for filename in glob.glob(directory + str("/*.png")) or glob.glob(directory + str("/*.jpg")):  # I'm only allowing png and jpg images as training images
+    for filename in glob.glob(directory + str("/*.png")) or glob.glob(directory + str("/*.jpg")): # This will only allow for .png anf .jpg to be imported
         im = Image.open(filename).convert('RGB')
         images.append(im)
     return images
@@ -23,7 +23,8 @@ def import_dataset(directory):
 
 def config_transforms(opt):
     trans_list = []
-    # For data augmentation, perform random cropping, sometimes horizontal flipping, sometimes vertical flipping and finalize normalize( to range [-1,1])
+    # For data augmentation, we probilisitically flip the image horizontally or vertically with a probability of 0.5
+    # In addition, we normalize the image to [-1, 1]
     if opt.phase == 'train':
         trans_list += [transforms.Resize((512,512)),
                        transforms.RandomHorizontalFlip(p=0.5),
@@ -65,7 +66,6 @@ class DataLoader:
 
 
 class FullDataset(data.Dataset):
-    # This class definitely needs to overwrite __len__ and  __getitem__
     def __init__(self, opt):
         super(FullDataset, self).__init__()
         self.opt = opt
@@ -92,16 +92,12 @@ class FullDataset(data.Dataset):
         A_img = self.transform(A_img)  # This is where we actually perform the transformation. These are now tensors that are normalized
         B_img = self.transform(B_img)
 
-        # We are going from a normal 600x400 image ( In the PIL format),
-        # after the transform, the image is manipulated and converted into a tensor for each image ( resulting size=[3,320,320])
-
         #A_gray = 1 - self.gray_transform(A_img)
 
         r, g, b = A_img[0] + 1, A_img[1] + 1, A_img[2] + 1
-        A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2.  # This is definitely the best way... My way only worked for an older version of torch
+        A_gray = 1. - (0.299 * r + 0.587 * g + 0.114 * b) / 2. # Take the negative of the illumination (grayscale image) as the illumination map that will be fed as input to the generator
         A_gray = torch.unsqueeze(A_gray, 0)
-        #print(A_gray.size())
-        # Size of A_gry is [1,340,340]
+        # Size of A_gray is [1,340,340]
         return {'A': A_img, 'B': B_img, 'A_gray': A_gray}
 
     def __len__(self):

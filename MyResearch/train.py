@@ -22,9 +22,9 @@ def print_errors(epoch, i, errors, t):
         log_file.write('%s\n' % message)
 
 
-opt = process(TrainingSetup(DefaultSetup()))
+opt = process(TrainingSetup(DefaultSetup())) # Parse the training options that will be used
 data_loader = DataLoader(opt)
-dataset = data_loader.load()
+dataset = data_loader.load() # Load the training dataloader
 print("Number of training images: %d" % len(data_loader))
 the_model = Networks.The_Model(opt)
 

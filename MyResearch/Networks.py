@@ -50,9 +50,9 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
         self.opt = opt
         # I'm assuming that a CUDA GPU is used.
-        self.input_A = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size)  # We are basically creating a tensor to store 16 low-light colour images with size crop_size x crop_size
-        self.input_B = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size)  # Same as above but now for storing the normal-light images (NOT THE RESULT!)
-        self.input_A_gray = torch.cuda.FloatTensor(opt.batch_size, 1, opt.crop_size, opt.crop_size)  # this is for the attention maps
+        self.input_A = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size)  # Tensor that will hold the input low-light images
+        self.input_B = torch.cuda.FloatTensor(opt.batch_size, 3, opt.crop_size, opt.crop_size) # Tensor that will hold the normal-light images
+        self.input_A_gray = torch.cuda.FloatTensor(opt.batch_size, 1, opt.crop_size, opt.crop_size) # Tensor that will hold the illumination maps
 
         self.vgg_loss = PerceptualLoss()
         self.vgg_loss.cuda()  # --> Shift to the GPU
@@ -60,7 +60,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.vgg = load_vgg(self.opt.gpu_ids)  # This is for data parallelism
         self.vgg.eval()  # We call eval() when some layers within the self.vgg network behave differently during training and testing... This will not be trained (Its frozen!)!
         # The eval function is often used as a pair with the requires.grad or torch.no grad functions (which makes sense)
-        # I'm setting it to eval() because it's not being trained in anyway
 
         for weights in self.vgg.parameters():
             weights.requires_grad = False  # The weights of vgg should not be trainable and we should not waste computation attempting to compute gradients for the VGG network
@@ -78,7 +77,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
             self.model_loss = GANLoss()
 
-            # Check if the below optimizers are set in accordance with Radford!
             self.G_optimizer = torch.optim.Adam(self.Gen.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.G_Disc_optimizer = torch.optim.Adam(self.G_Disc.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.L_Disc_optimizer = torch.optim.Adam(self.L_Disc.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
@@ -95,7 +93,7 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         self.fake_B = self.Gen.forward(the_input)  # We forward prop. a batch at a time, not individual images in the batch!
 
 
-    def update_learning_rate(self):
+    def update_learning_rate(self): # Linearly decays the learning rate to 0 over the final 50 epochs
 
         lrd = self.opt.lr / self.opt.niter_decay
         lr = self.old_lr - lrd
@@ -145,13 +143,11 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         # First let the discriminator make a prediction on the fake samples
         # This is the part recommended by Radford where we test real and fake samples in stages
         pred_fake = self.G_Disc.forward(self.fake_B)
-        # torch.mean() is a scalar... what is going on?
         pred_real = self.G_Disc.forward(self.real_B)
 
         self.Gen_adv_loss = (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
 
-        # Experiment as much as possible with the latent variable and understand what exactly does it represent.
         w = self.real_A.size(3)
         h = self.real_B.size(2)
 
@@ -188,11 +184,10 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
         self.total_vgg_loss += patch_loss_vgg / float(self.opt.num_patches)
 
-        self.Gen_loss = self.Gen_adv_loss + self.total_vgg_loss  # The loss stuff is extremely simple to understand!
+        self.Gen_loss = self.Gen_adv_loss + self.total_vgg_loss
         self.Gen_loss.backward()  # Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
 
     # This is invoked when we update both the global and local discriminator
-    # We just having to perform a slight modification when computing the loss for the global discriminator
     def Shared_Disc_Backprop(self, network, real, fake, is_global):
         pred_real = network.forward(real)
         pred_fake = network.forward(
@@ -231,7 +226,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
     def for_displaying_images(self):  # Since self.realA_ was declared as a Variable, .data extracts the tensor of the variable.
         real_A = TensorToImage(self.real_A.data)  # The low-light image (which is also our input image)
         fake_B = TensorToImage(self.fake_B.data)  # Our produced result
-        # What does the .data do? .data refrains from computing the gradient
         self_attention = TensorToImage(self.real_A_gray.data)
         return OrderedDict([('real_A', real_A), (
             'fake_B', fake_B)])  # , , ('latent_real_A', latent_real_A),('latent_show', latent_show), ('real_patch', real_patch),('fake_patch', fake_patch),('self_attention', self_attention)])
@@ -273,7 +267,7 @@ def make_Disc(opt, patch):
     return discriminator
 
 
-class GANLoss(nn.Module):
+class GANLoss(nn.Module): # We are using LSGAN loss which builds upon MSELoss
     def __init__(self):
         super(GANLoss, self).__init__()
         self.Tensor = torch.cuda.FloatTensor
@@ -296,7 +290,7 @@ class MinimalUnet(nn.Module):
     def __init__(self, down=None, up=None, submodule=None, withoutskip=False, **kwargs):
         super(MinimalUnet, self).__init__()
 
-        self.down = nn.Sequential(*down)  # THE LHS WILL HOLD THE RESULT!!!
+        self.down = nn.Sequential(*down)
         self.sub = submodule
         self.up = nn.Sequential(*up)
         self.withoutskip = withoutskip
@@ -322,7 +316,7 @@ class MinimalUnet(nn.Module):
 # |num_downs|: number of downsamplings in UNet. For example,
 # if |num_downs| == 7, image of size 128x128 will become of size 1x1
 # at the bottleneck
-class UnetGenerator(nn.Module):  # Perfect
+class UnetGenerator(nn.Module):
     def __init__(self, opt):
         ngf = 64
         super(UnetGenerator, self).__init__()
@@ -351,20 +345,18 @@ class UnetGenerator(nn.Module):  # Perfect
 #   |-- downsampling -- |submodule| -- upsampling --|
 class UnetSkipConnectionBlock(nn.Module):
     def __init__(self, outer_nc, inner_nc,
-                 submodule=None, position='intermediate', norm_layer=nn.BatchNorm2d):  # Has the attention stuff as well... look into it before adding it
+                 submodule=None, position='intermediate', norm_layer=nn.BatchNorm2d):
         super(UnetSkipConnectionBlock, self).__init__()
         input_nc = outer_nc
 
-        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4, stride=2, padding=1)  # The 3 is from looking at the encoder decoder approach
-        # Look into this!
-        # Note that we we are not doing the double downsampling convolution
-        downrelu = nn.LeakyReLU(0.2, True)  # Look into the choice of activation function used!
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4, stride=2, padding=1)
+        downrelu = nn.LeakyReLU(0.2, True)
         downnorm = norm_layer(inner_nc)
         uprelu = nn.ReLU(True)
         upnorm = norm_layer(outer_nc)
 
         if position == 'outermost':
-            # up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1)
+            # up_conv= nn.ConvTranspose2d(2*inner_nc, outer_nc,kernel_size=4, stride=2, padding=1) #--> These were initially problematic as it produced a checkerboard effect
             upsample = nn.UpsamplingBilinear2d(scale_factor=2)
             reflect = nn.ReflectionPad2d(1)
             up_conv = nn.Conv2d(2 * inner_nc, outer_nc, kernel_size=3, stride=1, padding=0)
@@ -394,7 +386,7 @@ class UnetSkipConnectionBlock(nn.Module):
         return self.model(x, mask)
 
 
-class PatchGAN(nn.Module):
+class PatchGAN(nn.Module): # We include batch normalization in the discriminator in an attempt to improve stability and performance
     def __init__(self, opt, patch):
         super(PatchGAN, self).__init__()
 
@@ -438,7 +430,7 @@ class PerceptualLoss(nn.Module):
         self.instance_norm = nn.InstanceNorm2d(512, affine=False)  # This is to stabilize training
         # 512 is the number of features
 
-    def compute_vgg_loss(self, vgg_network, image, target):
+    def compute_vgg_loss(self, vgg_network, image, target): # This is where we calculate the perceptual loss
         image_vgg = vgg_preprocess(image)
         target_vgg = vgg_preprocess(target)
         # The is precisely where we are calling forward on the vgg network
@@ -446,7 +438,6 @@ class PerceptualLoss(nn.Module):
         target_feature_map = vgg_network(target_vgg)  # Get the feature of the target image
 
         return torch.mean((self.instance_norm(img_feature_map) - self.instance_norm(target_feature_map)) ** 2)  # The actual Perceptual Loss calculation
-
 
 class Vgg(nn.Module):
 
