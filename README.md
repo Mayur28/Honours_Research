@@ -17,7 +17,7 @@ To execute our implementation, please follow the instructions listed below:<br>
 a.    Visit https://drive.google.com/<br>
 b.    Breate a directory named <i>Low-light_Image_Enh</i><br>
 c.    Within this newly created directory, create an additional directory titled <i>TheModel</i><br>
-d.    Upload the pretrained ![pretrained-weights](https://drive.google.com/file/d/1T0nMAWe5EELxPNMQd0Rmpv5lQy29JglL/view) inside this new directory<br>
+d.    Upload the pretrained ![pretrained-weights](https://drive.google.com/file/d/1vXTV7TNSSNkrkDtfwyrJ99hPz5i1511D/view?usp=sharing) inside this new directory<br>
 5. Return to the Colab notebook and follow the additional instructions provided which explains how the training and testing procedures can be configured to suit your requirements.<br>
 
 
