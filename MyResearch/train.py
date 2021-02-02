@@ -5,7 +5,6 @@ import Networks
 import time
 import os
 
-
 # Saves the input and output images
 def save_images(images, title, phase='train'):
     for label, image in images.items():  # .items() extracts the "packages" from the dictionary
