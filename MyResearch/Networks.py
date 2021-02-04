@@ -65,8 +65,6 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
             weights.requires_grad = False  # The weights of vgg should not be trainable and we should not waste computation attempting to compute gradients for the VGG network
 
 
-        self.scaler = torch.cuda.amp.GradScaler()
-
         self.Gen = make_G(opt)
         if self.opt.phase == 'test':
             self.load_model(self.Gen, 'Gener') # Will automatically load the latest generator model
@@ -120,19 +118,18 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
     def perform_update(self):  # Do the forward,backprop and update the weights
         # This is for optimizing the generator.
-        self.forward()  # This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches.
+        self.forward()  # This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
         self.G_optimizer.zero_grad()
         self.Gen_Backprop()
-        self.scaler.step(self.G_optimizer) # Perform the necessary optimization pertaining to the generator
+        self.G_optimizer.step() # Perform the necessary optimization pertaining to the generator
 
         # Now onto updating the discriminator!
         self.G_Disc_optimizer.zero_grad()
         self.Global_Disc_Backprop()
         self.L_Disc_optimizer.zero_grad()
         self.Local_Disc_Backprop()
-        self.scaler.step(self.G_Disc_optimizer)
-        self.scaler.step(self.L_Disc_optimizer)
-        self.scaler.update()
+        self.G_Disc_optimizer.step()
+        self.L_Disc_optimizer.step()
 
     def predict(self):
         self.real_A = Variable(self.input_A)
@@ -147,8 +144,8 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         # This is the part recommended by Radford where we test real and fake samples in stages
         pred_fake = self.G_Disc.forward(self.fake_B)
         pred_real = self.G_Disc.forward(self.real_B)
-        with torch.cuda.amp.autocast():
-            self.Gen_adv_loss = (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
+
+        self.Gen_adv_loss = (self.model_loss(pred_real - torch.mean(pred_fake), False) + self.model_loss(pred_fake - torch.mean(pred_real), True)) / 2
         # In a seperate variable, we start accumulating the loss from the different aspects (which include the loss on the patches and the vgg loss)
 
         w = self.real_A.size(3)
@@ -175,41 +172,40 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
             h_offset = random.randint(0, max(0, h - self.opt.patch_size - 1))
 
             pred_fake_patch_list = self.L_Disc.forward(self.fake_patch_list[i])
-            with torch.cuda.amp.autocast():
-                accum_gen_loss += self.model_loss(pred_fake_patch_list, True)
+
+            accum_gen_loss += self.model_loss(pred_fake_patch_list, True)
         self.Gen_adv_loss += accum_gen_loss / float(self.opt.num_patches)
-        with torch.cuda.amp.autocast():
-            self.total_vgg_loss = self.vgg_loss.compute_vgg_loss(self.vgg, self.fake_B, self.real_A) * 1.0  # This the vgg loss for the entire images!
+
+        self.total_vgg_loss = self.vgg_loss.compute_vgg_loss(self.vgg, self.fake_B, self.real_A) * 1.0  # This the vgg loss for the entire images!
 
         patch_loss_vgg = 0
         for i in range(self.opt.num_patches):
-            with torch.cuda.amp.autocast():
-                patch_loss_vgg += self.vgg_loss.compute_vgg_loss(self.vgg, self.fake_patch_list[i], self.input_patch_list[i]) * 1.0
+            patch_loss_vgg += self.vgg_loss.compute_vgg_loss(self.vgg, self.fake_patch_list[i], self.input_patch_list[i]) * 1.0
 
         self.total_vgg_loss += patch_loss_vgg / float(self.opt.num_patches)
 
         self.Gen_loss = self.Gen_adv_loss + self.total_vgg_loss
-        self.scaler.scale(self.Gen_loss).backward()  # Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
+        self.Gen_loss.backward()  # Compute the gradients of the generator using the sum of the adv loss and the vgg loss.
 
     # This is invoked when we update both the global and local discriminator
     def Shared_Disc_Backprop(self, network, real, fake, is_global):
         pred_real = network.forward(real)
-        pred_fake = network.forward(fake.detach())
+        pred_fake = network.forward(
+            fake.detach())
 
         if (is_global):
-            with torch.cuda.amp.autocast():
-                Disc_loss = (self.model_loss(pred_real - torch.mean(pred_fake), True) + self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
+            Disc_loss = (self.model_loss(pred_real - torch.mean(pred_fake), True) +
+                         self.model_loss(pred_fake - torch.mean(pred_real), False)) / 2
         else:
-            with torch.cuda.amp.autocast():
-                loss_D_real = self.model_loss(pred_real, True)
-                loss_D_fake = self.model_loss(pred_fake, False)
-                Disc_loss = (loss_D_real + loss_D_fake) * 0.5
+            loss_D_real = self.model_loss(pred_real, True)
+            loss_D_fake = self.model_loss(pred_fake, False)
+            Disc_loss = (loss_D_real + loss_D_fake) * 0.5
         return Disc_loss
 
     # Global discriminator backprop
     def Global_Disc_Backprop(self):
         self.G_Disc_loss = self.Shared_Disc_Backprop(self.G_Disc, self.real_B, self.fake_B, True)
-        self.scaler.scale(self.G_Disc_loss).backward()
+        self.G_Disc_loss.backward()
 
     # Local discriminator backprop
     def Local_Disc_Backprop(self):
@@ -218,7 +214,7 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
         for i in range(self.opt.num_patches):
             L_Disc_loss += self.Shared_Disc_Backprop(self.L_Disc, self.real_patch_list[i], self.fake_patch_list[i], False)
         self.L_Disc_loss = L_Disc_loss / float(self.opt.num_patches)
-        self.scaler.scale(L_Disc_loss).backward()
+        self.L_Disc_loss.backward()
 
     def get_model_errors(self, epoch):
         Gen = self.Gen_loss.item()
