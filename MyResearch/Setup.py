@@ -11,7 +11,7 @@ import numpy as np
 def DefaultSetup():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name', type=str, default='TheModel', help="Name of the current execution")
-    parser.add_argument('--data_source', type=str, default='../test_dataset', help='path to dataset and should have substructure containing trainA,trainB,testA,testB')
+    parser.add_argument('--data_source', type=str, default='Data/final_dataset', help='path to dataset and should have substructure containing trainA,trainB,testA,testB')
     # Calibrate the batch batch_size, crop_size and patch_size
     parser.add_argument('--crop_size', type=int, default=512, help='This will be the the size of the input to our network (the size is reduced by RandomCropping)')
     parser.add_argument('--patch_size', type=int, default=32, help='Size of patch')
