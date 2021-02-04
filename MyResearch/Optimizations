@@ -1,0 +1,20 @@
+Setup.py changes
+
+pip install dali first!
+Do DALI GPU (Mixed!)but dont put too much strain on the GPU, rather save it! - Get it working on a small dummy example, then interate it!
+Setup DALI
+Try to get the batch size up to 16 atleast
+Find a nice way of printing the configuration
+Get a dynamic profiler
+
+
+
+HPO
+Crop size
+patch Size
+num_downs
+num_disc_layers
+num_patch_disc_layers
+num_patches
+beta1
+lr
