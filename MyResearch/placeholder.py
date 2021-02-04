@@ -9,7 +9,7 @@ from new_dataloader import Dataset
 train_loader = dataset.get_train_loader()
 
 
-for epoch in range(args.start_epoch, args.epochs):
+for epoch in range(10):
     for i, data in enumerate(train_loader):
         input = data[0]
         target = data[1]
