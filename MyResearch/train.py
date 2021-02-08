@@ -4,11 +4,6 @@ from PIL import Image
 import Networks
 import time
 import os
-import wandb
-
-wandb.login()
-wandb.init(project="XXXX")
-#wandb.log({"Exploration %":eps_threshold*100, "Steps":t}) #This is what we know so far, now use it properly, as advised
 
 # Saves the input and output images
 def save_images(images, title, phase='train'):
@@ -22,7 +17,6 @@ def print_errors(epoch, i, errors, t):
     message = '(epoch: %d, iters: %d, time: %.3f)' % (epoch, i, t)
     for k, v in errors.items():  # --> This is to extract from the Ordered Dictionary
         message += '%s: %.3f ' % (k, v)
-         # fix this! wandb.log({"generator": v})
     print(message)
     with open(opt.log_name, "a") as log_file:
         log_file.write('%s\n' % message)

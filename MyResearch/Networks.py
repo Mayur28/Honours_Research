@@ -118,7 +118,7 @@ class The_Model:  # This is the grand model that encompasses everything ( the ge
 
     def perform_update(self):  # Do the forward,backprop and update the weights
         # This is for optimizing the generator.
-        self.forward()  # This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches. But why do we need the single patch and the list of patches? # NOTE! THIS DOES NOT PASS THROUGH THE NETWORK!!! EXPERIMENT THOROUGHLY HERE!
+        self.forward()  # This produces the fake samples and sets up some of the variables that we need ie. we initialize the fake patch and the list of patches.
         self.G_optimizer.zero_grad()
         self.Gen_Backprop()
         self.G_optimizer.step() # Perform the necessary optimization pertaining to the generator
