@@ -45,7 +45,7 @@ class Dataset():
     def __init__(self,
                  data_dir,
                  batch_size,
-                 size=224,
+                 size=512,
                  val_batch_size=1, # Check what is the story with this?
                  val_size=None,
                  workers=4,
@@ -60,6 +60,7 @@ class Dataset():
 
             self.batch_size = batch_size
             self.size = size
+            self.val_size = size
             self.val_batch_size = val_batch_size
             self.workers = workers
             self.cuda = cuda
@@ -70,20 +71,15 @@ class Dataset():
             self.std = std
             self.pin_memory_dali = pin_memory_dali
 
-            self.val_size = val_size
-            if self.val_size is None:
-                self.val_size = self.size
-
-            if self.val_batch_size is None:
-                self.val_batch_size = self.batch_size
 
             # Data loading code
             self.traindir = os.path.join(data_dir, 'train')
+            print("In new_dataloader: "+self.traindir)
             self.valdir = os.path.join(data_dir, 'val')
+            print("Validation Directory: "+self.valdir)
 
-            print(self.traindir)
             print('Using Nvidia DALI dataloader')
-            assert len(datasets.ImageFolder(self.valdir)) % self.val_batch_size == 0, 'Validation batch size must divide validation dataset size cleanly...  DALI has problems otherwise.'
+            #assert len(datasets.ImageFolder(self.valdir)) % self.val_batch_size == 0, 'Validation batch size must divide validation dataset size cleanly...  DALI has problems otherwise.'
             self._build_dali_pipeline()
 
 
@@ -93,24 +89,22 @@ class Dataset():
         iterator_train = DaliIteratorGPU
 
         self.train_pipe = HybridTrainPipe(batch_size=self.batch_size, num_threads=self.workers, device_id=0,
-                                          data_dir=self.traindir, crop=self.size, dali_cpu=self.dali_cpu,
-                                          mean=self.mean, std=self.std, local_rank=0,
-                                          world_size=self.world_size, shuffle=True, fp16=self.fp16, min_crop_size=self.min_crop_size)
+                                          data_dir=self.traindir, size=self.size, dali_cpu=self.dali_cpu,
+                                          mean=self.mean, std=self.std, shuffle=True)
 
         self.train_pipe.build()
-        self.train_loader = iterator_train(pipelines=self.train_pipe, size=self.get_nb_train() / self.world_size, fp16=self.fp16, mean=self.mean, std=self.std, pin_memory=self.pin_memory_dali)
+        self.train_loader = iterator_train(pipelines=self.train_pipe, size=self.get_nb_train(), fp16=self.fp16, mean=self.mean, std=self.std, pin_memory=self.pin_memory_dali)
 
         iterator_val = DaliIteratorGPU
         if val_on_cpu:
-            iterator_val = DaliIteratorCPU
+           iterator_val = DaliIteratorCPU
 
         self.val_pipe = HybridValPipe(batch_size=self.val_batch_size, num_threads=self.workers, device_id=0,
-                                      data_dir=self.valdir, crop=self.size, size=self.val_size, dali_cpu=val_on_cpu,
-                                      mean=self.mean, std=self.std, local_rank=0,
-                                      world_size=self.world_size, shuffle=False, fp16=self.fp16)
+                                     data_dir=self.valdir, size=self.val_size, dali_cpu=val_on_cpu,
+                                     mean=self.mean, std=self.std, shuffle=False, fp16=self.fp16)
 
         self.val_pipe.build()
-        self.val_loader = iterator_val(pipelines=self.val_pipe, size=self.get_nb_val() / self.world_size, fp16=self.fp16, mean=self.mean, std=self.std, pin_memory=self.pin_memory_dali)
+        self.val_loader = iterator_val(pipelines=self.val_pipe, size=self.get_nb_val(), fp16=self.fp16, mean=self.mean, std=self.std, pin_memory=self.pin_memory_dali)
 
 
     def get_train_loader(self):

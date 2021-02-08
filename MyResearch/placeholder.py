@@ -1,10 +1,9 @@
 from new_dataloader import Dataset
 
  # Create dataloader
-    dataset = Dataset(data_dir='../final_dataset',
-                      batch_size=4,
-                      val_batch_size=1,
-                      )
+dataset = Dataset(data_dir='Data/final_dataset/',
+                    batch_size=2,
+                    )
 
 train_loader = dataset.get_train_loader()
 

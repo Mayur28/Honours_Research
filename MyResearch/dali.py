@@ -18,9 +18,6 @@ class HybridTrainPipe(Pipeline):
     DALI Train Pipeline
     Based on the official example: https://github.com/NVIDIA/DALI/blob/master/docs/examples/pytorch/resnet50/main.py
     In comparison to the example, the CPU backend does more computation on CPU, reducing GPU load & memory use.
-    This dataloader implements ImageNet style training preprocessing, namely:
-    -random resized crop
-    -random horizontal flip
     batch_size (int): how many samples per batch to load
     num_threads (int): how many DALI workers to use for data loading.
     device_id (int): GPU device ID
@@ -36,8 +33,8 @@ class HybridTrainPipe(Pipeline):
 
 
 # Fix this properly
-    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, # By crop, I actually mean resize
-                 mean, std, dali_cpu=False, shuffle=True):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, size, # By crop, I actually mean resize
+                 mean, std, dali_cpu=False, shuffle=True): # Check whch of these are compulsory! crop and size dilemma
 
         # As we're recreating the Pipeline at every epoch, the seed must be -1 (random seed)
         super(HybridTrainPipe, self).__init__(batch_size, num_threads, device_id, seed=-1)
@@ -45,8 +42,7 @@ class HybridTrainPipe(Pipeline):
         # Enabling read_ahead slowed down processing ~40%
         self.input = ops.FileReader(file_root=data_dir,random_shuffle=shuffle)
 
-        # Let user decide which pipeline works best with the chosen model
-
+        #  I am assuming that I am only using DALI GPU (more specifically, mixed)
         decode_device = "mixed"
         self.dali_device = "gpu"
         output_dtype = types.FLOAT16
@@ -60,11 +56,11 @@ class HybridTrainPipe(Pipeline):
                                                  device_memory_padding=device_memory_padding,#???
                                                  host_memory_padding=host_memory_padding)#???
 
-        self.resize = ops.Resize(device= "cpu", image_type = types.RGB, size = (crop_size, crop_size), interp_type=types.INTERP_TRIANGULAR)
+        #Below is where all the operations are done (Check it finally)
+        self.resize = ops.Resize(device= "cpu", image_type = types.RGB, size = (size, size), interp_type=types.INTERP_TRIANGULAR)
         # In totality, I will be cropping, randomly flipping, jittering, then normalizing
         # Fix the seeding here
 
-        self.jitter = ops.Jitter(device= "cpu")
         #self.v_flipper = ops.Flip(device = "cpu",horizontal = 0,vertical = 1,  random_seed = 0.5)
         self.flipper = ops.Flip(device = "cpu")
 
@@ -74,12 +70,11 @@ class HybridTrainPipe(Pipeline):
 
     def define_graph(self):
         rng = self.coin()
-        self.jpegs, self.labels = self.input(name="Reader") # Where does this reader stuff come from? What happens in an unpaired setting?
+        self.jpegs, self.labels = self.input() # Where does this reader stuff come from? What happens in an unpaired setting?
 
         # Combined decode & random crop
         images = self.decode(self.jpegs)
         images = self.resize(size = (crop_size,crop_size))
-        images = self.jitter(images)
         images = self.flipper(images,horizontal=rng, vertical =self.coin())
         #images = self.v_flipper(images,vertical = rng)
         images = self.normalize(images) # Check if this needs to be added here again?
@@ -109,15 +104,15 @@ class HybridValPipe(Pipeline):
     shuffle (bool, optional, default = True) - Shuffle the dataset each epoch
     """
 
-    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size,
-                 mean, std, local_rank=0, world_size=1, dali_cpu=False, shuffle=False, fp16=False):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, size,
+                 mean, std, dali_cpu=False, shuffle=False, fp16=True):
 
         # As we're recreating the Pipeline at every epoch, the seed must be -1 (random seed)
         super(HybridValPipe, self).__init__(batch_size, num_threads, device_id, seed=-1)
 
         # Enabling read_ahead slowed down processing ~40%
         # Note: initial_fill is for the shuffle buffer.  As we only want to see every example once, this is set to 1
-        self.input = ops.FileReader(file_root=data_dir, random_shuffle=shuffle, initial_fill=1)
+        self.input = ops.FileReader(file_root=data_dir, random_shuffle=shuffle)
 
 
         decode_device = "mixed"
@@ -128,11 +123,11 @@ class HybridValPipe(Pipeline):
         self.decode = ops.ImageDecoder(device=decode_device, output_type=types.RGB)
 
         # Resize to desired size.  To match torchvision dataloader, use triangular interpolation
-        self.resize = ops.Resize(device= "cpu", image_type = types.RGB, size = (crop_size, crop_size), interp_type=types.INTERP_TRIANGULAR)
+        self.resize = ops.Resize(device= "cpu", image_type = types.RGB, size = (size,size), interp_type=types.INTERP_TRIANGULAR)
         self.normalize = ops.Normalize(device="gpu", image_type=types.RGB, mean = 0.5, std = 0.5)
 
     def define_graph(self):
-        self.jpegs, self.labels = self.input(name="Reader")
+        self.jpegs, self.labels = self.input()
         images = self.decode(self.jpegs)
         images = self.resize(images)
         images = self.normalize(images)
